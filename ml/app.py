@@ -64,3 +64,7 @@ def predict(data: PatientData):
     input_data = data.dict()
     disease = predict_disease(input_data)
     return {"disease": disease}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
