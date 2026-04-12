@@ -1,834 +1,632 @@
 "use client";
 import { useState, useCallback } from "react";
 
-// ---- Types ----
-type FormData = {
-  // Step 1: Basic Info
-  age: string;
-  gender: string; // "0" = Male, "1" = Female
-  bmi: string;
-  // Step 2: Medical History
-  hypertension: boolean;
-  heart_disease: boolean;
-  smoking: boolean;
-  family_history: boolean;
-  // Step 3: Vitals
-  glucose_level: string;
-  blood_pressure: string;
-  // Step 4: Symptoms
-  chest_pain: boolean;
-  fatigue: boolean;
-  confusion: boolean;
-  memory_loss: boolean;
-  headache: boolean;
-  fever: boolean;
-  nausea: boolean;
-  dizziness: boolean;
-  weakness: boolean;
-  numbness: boolean;
-  vision_problems: boolean;
-  speech_problems: boolean;
-  personality_changes: boolean;
-  behavioral_problems: boolean;
-  skin_rash: boolean;
-  diarrhea: boolean;
-  constipation: boolean;
+// ─── Types ───────────────────────────────────────────────────────────────────
+type F = {
+  age: string; gender: string; weight_category: string;
+  smoking: boolean; alcohol_consumption: boolean; recent_travel: boolean;
+  high_risk_lifestyle: boolean; family_history: boolean;
+  pre_existing_diabetes: boolean; pre_existing_hypertension: boolean;
+  pre_existing_heart_condition: boolean;
+  days_since_onset: string; pain_severity: string;
+  fever_severity: string; severity_score: string;
+  fever: boolean; chills: boolean; headache: boolean; fatigue: boolean;
+  weakness: boolean; nausea: boolean; vomiting: boolean; diarrhea: boolean;
+  constipation: boolean; chest_pain: boolean; shortness_of_breath: boolean;
+  skin_rash: boolean; joint_pain: boolean; muscle_pain: boolean;
+  sore_throat: boolean; cough: boolean; runny_nose: boolean;
+  loss_of_appetite: boolean; abdominal_pain: boolean; confusion: boolean;
+  memory_loss: boolean; dizziness: boolean; numbness: boolean;
+  vision_problems: boolean; speech_problems: boolean;
+  personality_changes: boolean; behavioral_problems: boolean;
+  sweating: boolean; loss_of_smell_taste: boolean; swollen_lymph_nodes: boolean;
 };
 
-const defaultForm: FormData = {
-  age: "",
-  gender: "0",
-  bmi: "",
-  hypertension: false,
-  heart_disease: false,
-  smoking: false,
-  family_history: false,
-  glucose_level: "",
-  blood_pressure: "",
-  chest_pain: false,
-  fatigue: false,
-  confusion: false,
-  memory_loss: false,
-  headache: false,
-  fever: false,
-  nausea: false,
-  dizziness: false,
-  weakness: false,
-  numbness: false,
-  vision_problems: false,
-  speech_problems: false,
-  personality_changes: false,
-  behavioral_problems: false,
-  skin_rash: false,
-  diarrhea: false,
-  constipation: false,
+const DEF: F = {
+  age: "", gender: "0", weight_category: "normal",
+  smoking: false, alcohol_consumption: false, recent_travel: false,
+  high_risk_lifestyle: false, family_history: false,
+  pre_existing_diabetes: false, pre_existing_hypertension: false,
+  pre_existing_heart_condition: false,
+  days_since_onset: "", pain_severity: "0", fever_severity: "0", severity_score: "1",
+  fever: false, chills: false, headache: false, fatigue: false,
+  weakness: false, nausea: false, vomiting: false, diarrhea: false,
+  constipation: false, chest_pain: false, shortness_of_breath: false,
+  skin_rash: false, joint_pain: false, muscle_pain: false,
+  sore_throat: false, cough: false, runny_nose: false,
+  loss_of_appetite: false, abdominal_pain: false, confusion: false,
+  memory_loss: false, dizziness: false, numbness: false,
+  vision_problems: false, speech_problems: false,
+  personality_changes: false, behavioral_problems: false,
+  sweating: false, loss_of_smell_taste: false, swollen_lymph_nodes: false,
 };
 
-// ---- Derived feature computation (mirrors train.py) ----
-function computeDerivedFeatures(form: FormData) {
-  const age = parseFloat(form.age) || 0;
-  const bmi = parseFloat(form.bmi) || 0;
-  const glucose = parseFloat(form.glucose_level) || 0;
-  const bp = parseFloat(form.blood_pressure) || 0;
-  const gender = parseInt(form.gender);
+// ─── Encoders / Derived features ─────────────────────────────────────────────
+function ageGroup(a: number) {
+  if (a < 13) return 1; if (a < 18) return 4; if (a < 30) return 5;
+  if (a < 45) return 0; if (a < 65) return 2; return 3;
+}
+const wtMap: Record<string, number> = { normal: 0, obese: 1, overweight: 2, underweight: 3 };
 
-  // Symptom flags
-  const symptoms = [
-    form.chest_pain, form.fatigue, form.confusion, form.memory_loss,
-    form.headache, form.fever, form.nausea, form.dizziness, form.weakness,
-    form.numbness, form.vision_problems, form.speech_problems,
-    form.personality_changes, form.behavioral_problems, form.skin_rash,
-    form.diarrhea, form.constipation,
-  ];
-  const symptom_count = symptoms.filter(Boolean).length;
-
-  // Neurological score (0-1)
-  const neuro_syms = [form.confusion, form.memory_loss, form.numbness, form.vision_problems, form.speech_problems, form.personality_changes, form.behavioral_problems];
-  const neurological_score = neuro_syms.filter(Boolean).length / neuro_syms.length;
-
-  // Infection score
-  const infect_syms = [form.fever, form.nausea, form.diarrhea, form.skin_rash];
-  const infection_score = infect_syms.filter(Boolean).length / infect_syms.length;
-
-  // Cardiovascular score
-  const cardio_syms = [form.chest_pain, form.dizziness, form.weakness];
-  const cardiovascular_score = cardio_syms.filter(Boolean).length / cardio_syms.length;
-
-  // BMI category: 0=Underweight(<18.5), 1=Normal(18.5-25), 2=Overweight(25-30), 3=Obese(>30)
-  const bmi_category = bmi < 18.5 ? 0 : bmi < 25 ? 1 : bmi < 30 ? 2 : 3;
-
-  // Age group: 0=Young(<30), 1=Middle(30-60), 2=Senior(>60)
-  const age_group = age < 30 ? 0 : age < 60 ? 1 : 2;
-
-  const high_glucose = glucose > 140 ? 1 : 0;
-  const high_bp = bp > 130 ? 1 : 0;
-
-  // Risk score (composite)
-  const risk_score =
-    (form.hypertension ? 1 : 0) * 0.2 +
-    (form.heart_disease ? 1 : 0) * 0.2 +
-    (form.smoking ? 1 : 0) * 0.1 +
-    high_glucose * 0.15 +
-    high_bp * 0.15 +
-    (bmi > 30 ? 0.1 : 0) +
-    (age > 60 ? 0.1 : 0);
-
-  const bmi_age_interaction = bmi * age;
-  const glucose_bp_ratio = bp !== 0 ? glucose / bp : 0;
-  const is_elderly = age >= 65 ? 1 : 0;
-  const is_young = age < 30 ? 1 : 0;
-  const obese = bmi >= 30 ? 1 : 0;
-  const underweight = bmi < 18.5 ? 1 : 0;
-  const multi_comorbidity = ((form.hypertension ? 1 : 0) + (form.heart_disease ? 1 : 0) + (form.smoking ? 1 : 0)) >= 2 ? 1 : 0;
-
+function buildPayload(f: F) {
+  const age = +f.age || 0;
+  const b = (v: boolean) => v ? 1 : 0;
+  const days = +f.days_since_onset || 0;
+  const allBool = [f.fever,f.chills,f.headache,f.fatigue,f.weakness,f.nausea,f.vomiting,
+    f.diarrhea,f.constipation,f.chest_pain,f.shortness_of_breath,f.skin_rash,f.joint_pain,
+    f.muscle_pain,f.sore_throat,f.cough,f.runny_nose,f.loss_of_appetite,f.abdominal_pain,
+    f.confusion,f.memory_loss,f.dizziness,f.numbness,f.vision_problems,f.speech_problems,
+    f.personality_changes,f.behavioral_problems,f.sweating,f.loss_of_smell_taste,f.swollen_lymph_nodes];
   return {
-    age,
-    gender,
-    bmi,
-    hypertension: form.hypertension ? 1 : 0,
-    heart_disease: form.heart_disease ? 1 : 0,
-    smoking: form.smoking ? 1 : 0,
-    glucose_level: glucose,
-    blood_pressure: bp,
-    chest_pain: form.chest_pain ? 1 : 0,
-    fatigue: form.fatigue ? 1 : 0,
-    confusion: form.confusion ? 1 : 0,
-    memory_loss: form.memory_loss ? 1 : 0,
-    headache: form.headache ? 1 : 0,
-    fever: form.fever ? 1 : 0,
-    nausea: form.nausea ? 1 : 0,
-    dizziness: form.dizziness ? 1 : 0,
-    weakness: form.weakness ? 1 : 0,
-    numbness: form.numbness ? 1 : 0,
-    vision_problems: form.vision_problems ? 1 : 0,
-    speech_problems: form.speech_problems ? 1 : 0,
-    personality_changes: form.personality_changes ? 1 : 0,
-    behavioral_problems: form.behavioral_problems ? 1 : 0,
-    skin_rash: form.skin_rash ? 1 : 0,
-    diarrhea: form.diarrhea ? 1 : 0,
-    constipation: form.constipation ? 1 : 0,
-    family_history: form.family_history ? 1 : 0,
-    symptom_count,
-    neurological_score,
-    infection_score,
-    cardiovascular_score,
-    bmi_category,
-    age_group,
-    high_glucose,
-    high_bp,
-    risk_score,
-    bmi_age_interaction,
-    glucose_bp_ratio,
-    is_elderly,
-    is_young,
-    obese,
-    underweight,
-    multi_comorbidity,
+    age, gender: +f.gender, weight_category: wtMap[f.weight_category] ?? 0,
+    smoking: b(f.smoking), alcohol_consumption: b(f.alcohol_consumption),
+    recent_travel: b(f.recent_travel), family_history: b(f.family_history),
+    high_risk_lifestyle: b(f.smoking) | b(f.alcohol_consumption),
+    pre_existing_diabetes: b(f.pre_existing_diabetes),
+    pre_existing_hypertension: b(f.pre_existing_hypertension),
+    pre_existing_heart_condition: b(f.pre_existing_heart_condition),
+    days_since_onset: days, pain_severity: +f.pain_severity || 0,
+    fever_severity: +f.fever_severity || 0, severity_score: +f.severity_score || 1,
+    fever: b(f.fever), chills: b(f.chills), headache: b(f.headache), fatigue: b(f.fatigue),
+    weakness: b(f.weakness), nausea: b(f.nausea), vomiting: b(f.vomiting),
+    diarrhea: b(f.diarrhea), constipation: b(f.constipation), chest_pain: b(f.chest_pain),
+    shortness_of_breath: b(f.shortness_of_breath), skin_rash: b(f.skin_rash),
+    joint_pain: b(f.joint_pain), muscle_pain: b(f.muscle_pain),
+    sore_throat: b(f.sore_throat), cough: b(f.cough), runny_nose: b(f.runny_nose),
+    loss_of_appetite: b(f.loss_of_appetite), abdominal_pain: b(f.abdominal_pain),
+    confusion: b(f.confusion), memory_loss: b(f.memory_loss), dizziness: b(f.dizziness),
+    numbness: b(f.numbness), vision_problems: b(f.vision_problems),
+    speech_problems: b(f.speech_problems), personality_changes: b(f.personality_changes),
+    behavioral_problems: b(f.behavioral_problems), sweating: b(f.sweating),
+    loss_of_smell_taste: b(f.loss_of_smell_taste), swollen_lymph_nodes: b(f.swollen_lymph_nodes),
+    symptom_count: allBool.filter(Boolean).length,
+    neurological_score: [f.confusion,f.memory_loss,f.numbness,f.vision_problems,f.speech_problems].filter(Boolean).length,
+    infection_score: [f.fever,f.chills,f.sweating,f.swollen_lymph_nodes,f.loss_of_smell_taste,f.skin_rash,f.recent_travel].filter(Boolean).length,
+    respiratory_score: [f.cough,f.shortness_of_breath,f.sore_throat,f.runny_nose,f.chest_pain].filter(Boolean).length,
+    gi_score: [f.nausea,f.vomiting,f.diarrhea,f.constipation,f.abdominal_pain].filter(Boolean).length,
+    pain_score: [f.headache,f.joint_pain,f.muscle_pain,f.chest_pain,f.abdominal_pain].filter(Boolean).length,
+    comorbidity_count: b(f.pre_existing_diabetes)+b(f.pre_existing_hypertension)+b(f.pre_existing_heart_condition),
+    age_group: ageGroup(age),
+    is_chronic: days > 90 ? 1 : 0,
+    is_acute: days <= 14 ? 1 : 0,
   };
 }
 
-// ---- Toggle Component ----
-function Toggle({
-  label,
-  sublabel,
-  checked,
-  onChange,
-  icon,
-}: {
-  label: string;
-  sublabel?: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  icon?: string;
-}) {
+// ─── Mini components ──────────────────────────────────────────────────────────
+function Chip({ label, icon, active, onClick }: { label: string; icon?: string; active: boolean; onClick: () => void }) {
   return (
-    <label
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 12,
-        padding: "14px 16px",
-        background: checked ? "rgba(0,232,122,0.06)" : "var(--surface)",
-        border: `1px solid ${checked ? "rgba(0,232,122,0.3)" : "var(--border)"}`,
-        borderRadius: 12,
-        cursor: "pointer",
-        transition: "all 0.2s ease",
-        userSelect: "none",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {icon && <span style={{ fontSize: 18 }}>{icon}</span>}
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text)" }}>
-            {label}
-          </div>
-          {sublabel && (
-            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>
-              {sublabel}
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="toggle" style={{ flexShrink: 0 }}>
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-        />
-        <span className="toggle-slider" />
-      </div>
-    </label>
+    <button onClick={onClick} style={{
+      display: "flex", alignItems: "center", gap: 7,
+      padding: "10px 16px",
+      background: active ? "rgba(0,232,122,0.12)" : "transparent",
+      border: `1.5px solid ${active ? "var(--accent)" : "rgba(255,255,255,0.08)"}`,
+      borderRadius: 100, cursor: "pointer", transition: "all 0.18s ease",
+      fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 600,
+      color: active ? "var(--accent)" : "rgba(255,255,255,0.45)",
+      whiteSpace: "nowrap",
+    }}>
+      {icon && <span style={{ fontSize: 15 }}>{icon}</span>}
+      {label}
+      {active && (
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", flexShrink: 0 }} />
+      )}
+    </button>
   );
 }
 
-// ---- Input Component ----
-function Field({
-  label,
-  placeholder,
-  value,
-  onChange,
-  type = "number",
-  unit,
-  hint,
-}: {
-  label: string;
-  placeholder: string;
-  value: string;
-  onChange: (v: string) => void;
-  type?: string;
-  unit?: string;
-  hint?: string;
-}) {
+function SeverityDot({ value, max, color }: { value: number; max: number; color: string }) {
   return (
-    <div>
-      <label style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", marginBottom: 8, display: "block" }}>
-        {label}
-      </label>
-      <div style={{ position: "relative" }}>
-        <input
-          className="hb-input"
-          type={type}
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          style={{ paddingRight: unit ? 50 : 14 }}
-        />
-        {unit && (
-          <span
-            style={{
-              position: "absolute",
-              right: 12,
-              top: "50%",
-              transform: "translateY(-50%)",
-              fontSize: 12,
-              color: "var(--text-dim)",
-              fontWeight: 600,
-            }}
-          >
-            {unit}
-          </span>
-        )}
-      </div>
-      {hint && (
-        <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 6 }}>
-          {hint}
-        </div>
-      )}
+    <div style={{ display: "flex", gap: 4 }}>
+      {Array.from({ length: max + 1 }).map((_, i) => (
+        <div key={i} style={{
+          width: i === 0 ? 8 : 8, height: 8, borderRadius: "50%",
+          background: i <= value ? color : "rgba(255,255,255,0.1)",
+          transition: "background 0.15s",
+        }} />
+      ))}
     </div>
   );
 }
 
-// ---- Steps ----
-const STEPS = [
-  { id: 1, label: "Profile" },
-  { id: 2, label: "History" },
-  { id: 3, label: "Vitals" },
-  { id: 4, label: "Symptoms" },
-];
+const DISEASE_META: Record<string, { icon: string; color: string }> = {
+  "Brain Stroke":        { icon: "🧠", color: "#ff6b6b" },
+  "Heart Disease":       { icon: "❤️", color: "#ff4444" },
+  "COVID-19":            { icon: "🦠", color: "#00b4d8" },
+  "Pneumonia":           { icon: "🫁", color: "#7b9cff" },
+  "Tuberculosis":        { icon: "🫁", color: "#c77dff" },
+  "Dengue":              { icon: "🦟", color: "#f9c74f" },
+  "Alzheimer's Disease": { icon: "🧠", color: "#ff9f43" },
+  "No Disease":          { icon: "✅", color: "#00e87a" },
+  "Typhoid":             { icon: "🌡️", color: "#ffd166" },
+  "Malaria":             { icon: "🦟", color: "#06d6a0" },
+  "Diabetes":            { icon: "💉", color: "#a8dadc" },
+};
 
-// ---- Main Component ----
+// ─── STEPS ───────────────────────────────────────────────────────────────────
+const STEPS = ["Profile", "History", "Condition", "Symptoms"];
+const STEP_ICONS = ["👤", "📋", "🩺", "🔍"];
+
 export default function PredictForm() {
-  const [form, setForm] = useState<FormData>(defaultForm);
-  const [step, setStep] = useState(1);
+  const [form, setForm] = useState<F>(DEF);
+  const [step, setStep] = useState(0); // 0-indexed
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const set = useCallback(
-    <K extends keyof FormData>(key: K, value: FormData[K]) => {
-      setForm((prev) => ({ ...prev, [key]: value }));
-    },
-    []
-  );
+  const set = useCallback(<K extends keyof F>(k: K, v: F[K]) =>
+    setForm(p => ({ ...p, [k]: v })), []);
 
-  const canNext = () => {
-    if (step === 1) return form.age && form.bmi && form.gender !== "";
-    if (step === 3) return form.glucose_level && form.blood_pressure;
+  const canAdvance = () => {
+    if (step === 0) return !!form.age && +form.age > 0;
+    if (step === 2) return form.days_since_onset !== "" && +form.days_since_onset >= 0;
     return true;
   };
 
-  const handlePredict = async () => {
-    setLoading(true);
-    setError(null);
-    setResult(null);
+  const totalSymptoms = [
+    form.fever,form.chills,form.headache,form.fatigue,form.weakness,form.nausea,
+    form.vomiting,form.diarrhea,form.constipation,form.chest_pain,form.shortness_of_breath,
+    form.skin_rash,form.joint_pain,form.muscle_pain,form.sore_throat,form.cough,
+    form.runny_nose,form.loss_of_appetite,form.abdominal_pain,form.confusion,
+    form.memory_loss,form.dizziness,form.numbness,form.vision_problems,form.speech_problems,
+    form.personality_changes,form.behavioral_problems,form.sweating,
+    form.loss_of_smell_taste,form.swollen_lymph_nodes,
+  ].filter(Boolean).length;
 
-    const payload = computeDerivedFeatures(form);
-
+  const predict = async () => {
+    setLoading(true); setError(null); setResult(null);
     try {
-      const res = await fetch("/api/predict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const r = await fetch("/api/predict", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildPayload(form)),
       });
-
-      const data = await res.json();
-
-      if (data.success && data.disease) {
-        setResult(data.disease);
-      } else {
-        setError(
-          data.error ||
-            "Backend returned an error. Make sure the FastAPI server is running on port 8000."
-        );
-      }
+      const d = await r.json();
+      if (d.success && d.disease) setResult(d.disease);
+      else setError(d.error || "Prediction failed.");
     } catch {
-      setError(
-        "Could not connect to prediction server. Please ensure the FastAPI backend is running: uvicorn app:app --reload"
-      );
-    } finally {
-      setLoading(false);
+      setError("Cannot reach the backend.\nRun: python -m uvicorn app:app --reload");
     }
+    setLoading(false);
   };
 
-  const resetAll = () => {
-    setForm(defaultForm);
-    setStep(1);
-    setResult(null);
-    setError(null);
-  };
+  const reset = () => { setForm(DEF); setStep(0); setResult(null); setError(null); };
 
-  // ---- Result screen ----
+  // ── RESULT SCREEN ────────────────────────────────────────────────────────
   if (result) {
+    const meta = DISEASE_META[result] ?? { icon: "🩺", color: "var(--accent)" };
+    const isHealthy = result === "No Disease";
     return (
-      <div className="animate-scale-in" style={{ textAlign: "center" }}>
-        {/* Confetti circles */}
-        {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            style={{
-              position: "absolute",
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: "var(--accent)",
-              opacity: 0.6,
-              top: `${20 + i * 10}%`,
-              left: `${10 + i * 15}%`,
-              animation: `float ${2 + i * 0.5}s ease-in-out infinite`,
-              animationDelay: `${i * 0.3}s`,
-            }}
-          />
-        ))}
+      <div style={{ textAlign: "center", padding: "8px 0" }}>
+        {/* Big icon */}
+        <div style={{
+          width: 120, height: 120, borderRadius: "50%", margin: "0 auto 28px",
+          background: `${meta.color}15`,
+          border: `2px solid ${meta.color}40`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 52,
+          boxShadow: `0 0 60px ${meta.color}20`,
+          animation: "scaleIn 0.5s cubic-bezier(0.22,1,0.36,1)",
+        }}>{meta.icon}</div>
 
-        <div
-          style={{
-            width: 80,
-            height: 80,
-            background: "var(--accent-glow)",
-            border: "2px solid var(--accent)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 36,
-            margin: "0 auto 32px",
-          }}
-        >
-          🩺
-        </div>
+        <p style={{ fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 700, color: "rgba(255,255,255,0.35)", marginBottom: 12 }}>
+          AI PREDICTION
+        </p>
 
-        <div
-          style={{
-            fontSize: 13,
-            fontWeight: 600,
-            color: "var(--accent)",
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            marginBottom: 16,
-          }}
-        >
-          Prediction Complete
-        </div>
-
-        <div
-          style={{
-            fontFamily: "var(--font-serif)",
-            fontSize: "clamp(28px, 5vw, 48px)",
-            lineHeight: 1.1,
-            marginBottom: 8,
-          }}
-        >
-          Predicted Condition:
-        </div>
-
-        <div
-          className="shimmer-text"
-          style={{
-            fontFamily: "var(--font-serif)",
-            fontSize: "clamp(36px, 6vw, 64px)",
-            fontWeight: 700,
-            lineHeight: 1.1,
-            marginBottom: 32,
-          }}
-        >
+        <div style={{
+          fontSize: "clamp(32px,5vw,52px)", fontFamily: "var(--font-serif)",
+          fontWeight: 700, color: meta.color, lineHeight: 1.1, marginBottom: 28,
+          textShadow: `0 0 40px ${meta.color}40`,
+        }}>
           {result}
         </div>
 
-        <div
-          style={{
-            background: "rgba(255,170,0,0.1)",
-            border: "1px solid rgba(255,170,0,0.3)",
-            borderRadius: 12,
-            padding: "16px 24px",
-            maxWidth: 500,
-            margin: "0 auto 40px",
-          }}
-        >
-          <div style={{ fontSize: 13, color: "#ffaa00", lineHeight: 1.6 }}>
-            ⚠️ This is an AI-based prediction for informational purposes only.
-            Always consult a qualified healthcare professional for an official diagnosis.
+        {isHealthy ? (
+          <div style={{ background: "rgba(0,232,122,0.08)", border: "1px solid rgba(0,232,122,0.2)", borderRadius: 14, padding: "18px 24px", marginBottom: 28, maxWidth: 460, margin: "0 auto 28px" }}>
+            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.7 }}>
+              Great news! No significant disease pattern was detected based on your inputs. Continue maintaining a healthy lifestyle.
+            </div>
           </div>
-        </div>
+        ) : (
+          <div style={{ background: "rgba(255,170,0,0.07)", border: "1px solid rgba(255,170,0,0.2)", borderRadius: 14, padding: "18px 24px", marginBottom: 28, maxWidth: 460, margin: "0 auto 28px" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#ffaa00", marginBottom: 8 }}>⚠ Medical Disclaimer</div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.7 }}>
+              This is an AI-based prediction for informational purposes only. It is <strong style={{ color: "rgba(255,255,255,0.8)" }}>not a diagnosis</strong>. Please consult a qualified healthcare professional.
+            </div>
+          </div>
+        )}
 
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-          <button className="hb-btn" onClick={resetAll}>
-            New Prediction
-          </button>
-          <button className="hb-btn-outline" onClick={() => { setResult(null); setStep(4); }}>
-            Edit Symptoms
-          </button>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginTop: 12 }}>
+          <button onClick={reset} style={{
+            padding: "13px 28px", background: "var(--accent)", color: "#000",
+            border: "none", borderRadius: 10, fontWeight: 700, fontSize: 14,
+            cursor: "pointer", fontFamily: "var(--font-sans)",
+            transition: "all 0.2s",
+          }}>New Prediction</button>
+          <button onClick={() => { setResult(null); setStep(3); }} style={{
+            padding: "13px 28px", background: "transparent", color: "rgba(255,255,255,0.5)",
+            border: "1.5px solid rgba(255,255,255,0.12)", borderRadius: 10,
+            fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "var(--font-sans)",
+          }}>Edit Symptoms</button>
         </div>
       </div>
     );
   }
 
+  // ── PROGRESS BAR ─────────────────────────────────────────────────────────
+  const pct = ((step + 1) / STEPS.length) * 100;
+
   return (
     <div>
-      {/* Step Dots */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          justifyContent: "center",
-          marginBottom: 48,
-        }}
-      >
-        {STEPS.map((s, i) => (
-          <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div
-              className={`step-dot ${step === s.id ? "active" : step > s.id ? "done" : ""}`}
-            />
-            {i < STEPS.length - 1 && (
-              <div
-                style={{
-                  width: 24,
-                  height: 1,
-                  background: step > s.id ? "var(--accent-dim)" : "var(--border)",
-                  transition: "background 0.3s",
-                }}
-              />
-            )}
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--accent)", marginBottom: 4 }}>
+            Step {step + 1} / {STEPS.length}
           </div>
-        ))}
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#fff", fontFamily: "var(--font-serif)" }}>
+            {STEPS[step]}
+          </div>
+        </div>
+        <div style={{ fontSize: 36 }}>{STEP_ICONS[step]}</div>
       </div>
 
-      {/* Step label */}
-      <div
-        style={{
-          fontSize: 12,
-          color: "var(--accent)",
-          fontWeight: 700,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          marginBottom: 12,
-          textAlign: "center",
-        }}
-      >
-        Step {step} of {STEPS.length} — {STEPS[step - 1].label}
+      {/* Progress */}
+      <div style={{ marginBottom: 36 }}>
+        <div style={{ width: "100%", height: 3, background: "rgba(255,255,255,0.07)", borderRadius: 2 }}>
+          <div style={{ width: `${pct}%`, height: "100%", background: "var(--accent)", borderRadius: 2, transition: "width 0.4s cubic-bezier(0.4,0,0.2,1)", boxShadow: "0 0 8px var(--accent)" }} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10 }}>
+          {STEPS.map((s, i) => (
+            <div key={s} style={{ fontSize: 11, fontWeight: 600, color: i <= step ? "var(--accent)" : "rgba(255,255,255,0.2)", transition: "color 0.3s" }}>{s}</div>
+          ))}
+        </div>
       </div>
 
-      {/* ---- STEP 1: Profile ---- */}
-      {step === 1 && (
-        <div className="animate-slide-up" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <h3 style={{ fontFamily: "var(--font-serif)", fontSize: 28, marginBottom: 4 }}>
-            Your Health Profile
-          </h3>
-          <p style={{ color: "var(--text-muted)", fontSize: 14, marginBottom: 8 }}>
-            Let&rsquo;s start with some basic information about you.
-          </p>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <Field
-              label="Age"
-              placeholder="e.g. 35"
-              value={form.age}
-              onChange={(v) => set("age", v)}
-              unit="yrs"
-              hint="Your current age in years"
-            />
-            <Field
-              label="BMI (Body Mass Index)"
-              placeholder="e.g. 24.5"
-              value={form.bmi}
-              onChange={(v) => set("bmi", v)}
-              hint="Weight(kg) / Height(m)²"
-            />
-          </div>
-
-          {/* Gender */}
+      {/* ── STEP 0: PROFILE ─────────────────────────────────────────────── */}
+      {step === 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+          {/* Age */}
           <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", marginBottom: 12, display: "block" }}>
-              Biological Sex
-            </label>
+            <label style={lbl}>Age</label>
+            <div style={{ position: "relative" }}>
+              <input type="number" min={1} max={120}
+                placeholder="35" value={form.age}
+                onChange={e => set("age", e.target.value)}
+                suppressHydrationWarning
+                style={{ ...inp, fontSize: 28, fontWeight: 700, color: "#fff", textAlign: "center", letterSpacing: "0.05em", padding: "18px 60px" }}
+              />
+              <span style={{ position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>yrs</span>
+            </div>
+            <p style={hint}>Enter your current age in years</p>
+          </div>
+
+          {/* Sex */}
+          <div>
+            <label style={lbl}>Biological Sex</label>
             <div style={{ display: "flex", gap: 12 }}>
-              {[{ val: "0", label: "Male", icon: "♂" }, { val: "1", label: "Female", icon: "♀" }].map((g) => (
-                <button
-                  key={g.val}
-                  onClick={() => set("gender", g.val)}
-                  style={{
-                    flex: 1,
-                    padding: "16px",
-                    background: form.gender === g.val ? "var(--accent-glow)" : "var(--surface)",
-                    border: `1px solid ${form.gender === g.val ? "var(--accent)" : "var(--border)"}`,
-                    borderRadius: 12,
-                    color: form.gender === g.val ? "var(--accent)" : "var(--text-muted)",
-                    fontSize: 16,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    fontFamily: "var(--font-sans)",
-                  }}
-                >
-                  <div style={{ fontSize: 24, marginBottom: 6 }}>{g.icon}</div>
-                  {g.label}
+              {[{ v: "0", l: "Male", i: "♂" }, { v: "1", l: "Female", i: "♀" }].map(g => (
+                <button key={g.v} onClick={() => set("gender", g.v)} style={{
+                  flex: 1, padding: "20px 12px",
+                  background: form.gender === g.v ? "rgba(0,232,122,0.1)" : "rgba(255,255,255,0.03)",
+                  border: `1.5px solid ${form.gender === g.v ? "var(--accent)" : "rgba(255,255,255,0.08)"}`,
+                  borderRadius: 14, cursor: "pointer", fontFamily: "var(--font-sans)",
+                  transition: "all 0.2s",
+                }}>
+                  <div style={{ fontSize: 28, marginBottom: 6, color: form.gender === g.v ? "var(--accent)" : "rgba(255,255,255,0.4)" }}>{g.i}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: form.gender === g.v ? "var(--accent)" : "rgba(255,255,255,0.5)" }}>{g.l}</div>
                 </button>
               ))}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* ---- STEP 2: Medical History ---- */}
-      {step === 2 && (
-        <div className="animate-slide-up" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <h3 style={{ fontFamily: "var(--font-serif)", fontSize: 28, marginBottom: 4 }}>
-            Medical History
-          </h3>
-          <p style={{ color: "var(--text-muted)", fontSize: 14, marginBottom: 8 }}>
-            Do you have any of the following conditions? Toggle all that apply.
-          </p>
-          <Toggle
-            label="Hypertension"
-            sublabel="High blood pressure (diagnosed)"
-            checked={form.hypertension}
-            onChange={(v) => set("hypertension", v)}
-            icon="💊"
-          />
-          <Toggle
-            label="Heart Disease"
-            sublabel="Any diagnosed cardiac condition"
-            checked={form.heart_disease}
-            onChange={(v) => set("heart_disease", v)}
-            icon="❤️"
-          />
-          <Toggle
-            label="Smoking"
-            sublabel="Current or former smoker"
-            checked={form.smoking}
-            onChange={(v) => set("smoking", v)}
-            icon="🚬"
-          />
-          <Toggle
-            label="Family History of Illness"
-            sublabel="Close relative with major disease"
-            checked={form.family_history}
-            onChange={(v) => set("family_history", v)}
-            icon="🧬"
-          />
-        </div>
-      )}
-
-      {/* ---- STEP 3: Vitals ---- */}
-      {step === 3 && (
-        <div className="animate-slide-up" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <h3 style={{ fontFamily: "var(--font-serif)", fontSize: 28, marginBottom: 4 }}>
-            Current Vitals
-          </h3>
-          <p style={{ color: "var(--text-muted)", fontSize: 14, marginBottom: 8 }}>
-            Enter your most recent lab or measurement readings.
-          </p>
-          <Field
-            label="Blood Glucose Level"
-            placeholder="e.g. 95"
-            value={form.glucose_level}
-            onChange={(v) => set("glucose_level", v)}
-            unit="mg/dL"
-            hint="Fasting glucose: Normal &lt;100, Pre-diabetic 100–125, Diabetic ≥126"
-          />
-          <Field
-            label="Blood Pressure (Systolic)"
-            placeholder="e.g. 120"
-            value={form.blood_pressure}
-            onChange={(v) => set("blood_pressure", v)}
-            unit="mmHg"
-            hint="The top number from your BP reading. Normal &lt;120, Elevated 120–129, High ≥130"
-          />
-
-          {/* Visual indicators */}
-          {form.glucose_level && (
-            <div
-              style={{
-                padding: "12px 16px",
-                background:
-                  parseFloat(form.glucose_level) < 100
-                    ? "rgba(0,232,122,0.08)"
-                    : parseFloat(form.glucose_level) < 126
-                    ? "rgba(255,170,0,0.08)"
-                    : "rgba(255,68,68,0.08)",
-                border: `1px solid ${
-                  parseFloat(form.glucose_level) < 100
-                    ? "rgba(0,232,122,0.3)"
-                    : parseFloat(form.glucose_level) < 126
-                    ? "rgba(255,170,0,0.3)"
-                    : "rgba(255,68,68,0.3)"
-                }`,
-                borderRadius: 10,
-                fontSize: 13,
-                color:
-                  parseFloat(form.glucose_level) < 100
-                    ? "var(--accent)"
-                    : parseFloat(form.glucose_level) < 126
-                    ? "#ffaa00"
-                    : "#ff4444",
-              }}
-            >
-              {parseFloat(form.glucose_level) < 100
-                ? "✓ Normal glucose range"
-                : parseFloat(form.glucose_level) < 126
-                ? "⚠ Pre-diabetic range — monitor closely"
-                : "⚠ Diabetic range — consult a doctor"}
+          {/* Weight */}
+          <div>
+            <label style={lbl}>Weight Category</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {[
+                { v: "underweight", l: "Underweight", s: "BMI < 18.5", i: "📉" },
+                { v: "normal",      l: "Normal",      s: "BMI 18.5–24.9", i: "✅" },
+                { v: "overweight",  l: "Overweight",  s: "BMI 25–29.9", i: "📊" },
+                { v: "obese",       l: "Obese",       s: "BMI ≥ 30", i: "📈" },
+              ].map(w => {
+                const act = form.weight_category === w.v;
+                return (
+                  <button key={w.v} onClick={() => set("weight_category", w.v)} style={{
+                    padding: "16px 14px", textAlign: "left",
+                    background: act ? "rgba(0,232,122,0.08)" : "rgba(255,255,255,0.03)",
+                    border: `1.5px solid ${act ? "var(--accent)" : "rgba(255,255,255,0.08)"}`,
+                    borderRadius: 14, cursor: "pointer", transition: "all 0.2s", fontFamily: "var(--font-sans)",
+                  }}>
+                    <div style={{ fontSize: 22, marginBottom: 8 }}>{w.i}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: act ? "var(--accent)" : "rgba(255,255,255,0.7)", marginBottom: 3 }}>{w.l}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.28)" }}>{w.s}</div>
+                  </button>
+                );
+              })}
             </div>
-          )}
-          {form.blood_pressure && (
-            <div
-              style={{
-                padding: "12px 16px",
-                background:
-                  parseFloat(form.blood_pressure) < 120
-                    ? "rgba(0,232,122,0.08)"
-                    : parseFloat(form.blood_pressure) < 130
-                    ? "rgba(255,170,0,0.08)"
-                    : "rgba(255,68,68,0.08)",
-                border: `1px solid ${
-                  parseFloat(form.blood_pressure) < 120
-                    ? "rgba(0,232,122,0.3)"
-                    : parseFloat(form.blood_pressure) < 130
-                    ? "rgba(255,170,0,0.3)"
-                    : "rgba(255,68,68,0.3)"
-                }`,
-                borderRadius: 10,
-                fontSize: 13,
-                color:
-                  parseFloat(form.blood_pressure) < 120
-                    ? "var(--accent)"
-                    : parseFloat(form.blood_pressure) < 130
-                    ? "#ffaa00"
-                    : "#ff4444",
-              }}
-            >
-              {parseFloat(form.blood_pressure) < 120
-                ? "✓ Normal blood pressure"
-                : parseFloat(form.blood_pressure) < 130
-                ? "⚠ Elevated blood pressure"
-                : "⚠ High blood pressure — hypertension range"}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ---- STEP 4: Symptoms ---- */}
-      {step === 4 && (
-        <div className="animate-slide-up" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <h3 style={{ fontFamily: "var(--font-serif)", fontSize: 28, marginBottom: 4 }}>
-            Current Symptoms
-          </h3>
-          <p style={{ color: "var(--text-muted)", fontSize: 14, marginBottom: 8 }}>
-            Toggle every symptom you&rsquo;re currently experiencing.
-          </p>
-
-          {/* Symptom count badge */}
-          {(() => {
-            const count = [
-              form.chest_pain, form.fatigue, form.confusion, form.memory_loss,
-              form.headache, form.fever, form.nausea, form.dizziness, form.weakness,
-              form.numbness, form.vision_problems, form.speech_problems,
-              form.personality_changes, form.behavioral_problems, form.skin_rash,
-              form.diarrhea, form.constipation,
-            ].filter(Boolean).length;
-            return count > 0 ? (
-              <div
-                style={{
-                  background: "var(--accent-glow)",
-                  border: "1px solid rgba(0,232,122,0.3)",
-                  borderRadius: 10,
-                  padding: "10px 16px",
-                  fontSize: 13,
-                  color: "var(--accent)",
-                  fontWeight: 600,
-                  marginBottom: 4,
-                }}
-              >
-                {count} symptom{count > 1 ? "s" : ""} selected
-              </div>
-            ) : null;
-          })()}
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <Toggle label="Chest Pain" checked={form.chest_pain} onChange={(v) => set("chest_pain", v)} icon="💔" />
-            <Toggle label="Fatigue" checked={form.fatigue} onChange={(v) => set("fatigue", v)} icon="😴" />
-            <Toggle label="Confusion" checked={form.confusion} onChange={(v) => set("confusion", v)} icon="😵" />
-            <Toggle label="Memory Loss" checked={form.memory_loss} onChange={(v) => set("memory_loss", v)} icon="🧠" />
-            <Toggle label="Headache" checked={form.headache} onChange={(v) => set("headache", v)} icon="🤕" />
-            <Toggle label="Fever" checked={form.fever} onChange={(v) => set("fever", v)} icon="🌡️" />
-            <Toggle label="Nausea" checked={form.nausea} onChange={(v) => set("nausea", v)} icon="🤢" />
-            <Toggle label="Dizziness" checked={form.dizziness} onChange={(v) => set("dizziness", v)} icon="💫" />
-            <Toggle label="Weakness" checked={form.weakness} onChange={(v) => set("weakness", v)} icon="💪" />
-            <Toggle label="Numbness" checked={form.numbness} onChange={(v) => set("numbness", v)} icon="🖐️" />
-            <Toggle label="Vision Problems" checked={form.vision_problems} onChange={(v) => set("vision_problems", v)} icon="👁️" />
-            <Toggle label="Speech Problems" checked={form.speech_problems} onChange={(v) => set("speech_problems", v)} icon="💬" />
-            <Toggle label="Personality Changes" checked={form.personality_changes} onChange={(v) => set("personality_changes", v)} icon="🎭" />
-            <Toggle label="Behavioural Issues" checked={form.behavioral_problems} onChange={(v) => set("behavioral_problems", v)} icon="⚡" />
-            <Toggle label="Skin Rash" checked={form.skin_rash} onChange={(v) => set("skin_rash", v)} icon="🩹" />
-            <Toggle label="Diarrhoea" checked={form.diarrhea} onChange={(v) => set("diarrhea", v)} icon="🚽" />
-            <Toggle label="Constipation" checked={form.constipation} onChange={(v) => set("constipation", v)} icon="😣" />
           </div>
+        </div>
+      )}
+
+      {/* ── STEP 1: HISTORY ─────────────────────────────────────────────── */}
+      {step === 1 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <Section label="🏃 Lifestyle" />
+          <ChipGroup>
+            <Chip label="Smoker" icon="🚬" active={form.smoking} onClick={() => set("smoking", !form.smoking)} />
+            <Chip label="Alcohol" icon="🍺" active={form.alcohol_consumption} onClick={() => set("alcohol_consumption", !form.alcohol_consumption)} />
+            <Chip label="Recent Travel" icon="✈️" active={form.recent_travel} onClick={() => set("recent_travel", !form.recent_travel)} />
+            <Chip label="High-Risk Lifestyle" icon="⚠️" active={form.high_risk_lifestyle} onClick={() => set("high_risk_lifestyle", !form.high_risk_lifestyle)} />
+          </ChipGroup>
+
+          <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+
+          <Section label="🏥 Medical History" />
+          <ChipGroup>
+            <Chip label="Family History" icon="🧬" active={form.family_history} onClick={() => set("family_history", !form.family_history)} />
+            <Chip label="Diabetes" icon="💉" active={form.pre_existing_diabetes} onClick={() => set("pre_existing_diabetes", !form.pre_existing_diabetes)} />
+            <Chip label="Hypertension" icon="💊" active={form.pre_existing_hypertension} onClick={() => set("pre_existing_hypertension", !form.pre_existing_hypertension)} />
+            <Chip label="Heart Condition" icon="❤️" active={form.pre_existing_heart_condition} onClick={() => set("pre_existing_heart_condition", !form.pre_existing_heart_condition)} />
+          </ChipGroup>
+
+          {(form.pre_existing_diabetes || form.pre_existing_hypertension || form.pre_existing_heart_condition) && (
+            <div style={{ padding: "12px 16px", background: "rgba(255,107,107,0.07)", border: "1px solid rgba(255,107,107,0.15)", borderRadius: 10, fontSize: 12, color: "rgba(255,150,150,0.8)", lineHeight: 1.6 }}>
+              ⚕ Pre-existing conditions noted — these significantly influence risk scoring.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── STEP 2: CONDITION ───────────────────────────────────────────── */}
+      {step === 2 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+          {/* Days */}
+          <div>
+            <label style={lbl}>How long have you been unwell?</label>
+            <div style={{ position: "relative" }}>
+              <input type="number" min={0} max={1825} suppressHydrationWarning
+                placeholder="e.g. 3" value={form.days_since_onset}
+                onChange={e => set("days_since_onset", e.target.value)}
+                style={{ ...inp, fontSize: 28, fontWeight: 700, color: "#fff", textAlign: "center", padding: "18px 60px" }}
+              />
+              <span style={{ position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>days</span>
+            </div>
+            {form.days_since_onset !== "" && (() => {
+              const d = +form.days_since_onset;
+              const [bg, brd, col, msg] =
+                d <= 14  ? ["rgba(0,232,122,0.07)","rgba(0,232,122,0.2)","var(--accent)","⚡ Acute — 0 to 14 days"] :
+                d <= 90  ? ["rgba(255,170,0,0.07)","rgba(255,170,0,0.2)","#ffaa00","⚠ Sub-acute — 15 to 90 days"] :
+                           ["rgba(255,68,68,0.07)","rgba(255,68,68,0.2)","#ff6b6b","🔴 Chronic — over 90 days"];
+              return (
+                <div style={{ marginTop: 12, padding: "10px 16px", background: bg, border: `1px solid ${brd}`, borderRadius: 10, fontSize: 13, fontWeight: 600, color: col }}>
+                  {msg}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Sliders */}
+          <SliderRow
+            label="Pain Severity" value={+form.pain_severity} max={8}
+            onChange={v => set("pain_severity", String(v))}
+            ticks={["None","","Mild","","","Moderate","","","Severe"]}
+            colorAt={v => v <= 2 ? "var(--accent)" : v <= 5 ? "#ffaa00" : "#ff4444"}
+          />
+          <SliderRow
+            label="Fever Severity" value={+form.fever_severity} max={4}
+            onChange={v => set("fever_severity", String(v))}
+            ticks={["None","Low","Moderate","High","Very High"]}
+            colorAt={v => v === 0 ? "var(--accent)" : v <= 2 ? "#ffaa00" : "#ff4444"}
+          />
+          <SliderRow
+            label="Overall Severity" value={+form.severity_score} max={9} offset={1}
+            onChange={v => set("severity_score", String(v + 1))}
+            ticks={["1","2","3","4","5","6","7","8","9","10"]}
+            colorAt={v => v <= 2 ? "var(--accent)" : v <= 5 ? "#ffaa00" : "#ff4444"}
+            displayVal={+form.severity_score || 1}
+          />
+        </div>
+      )}
+
+      {/* ── STEP 3: SYMPTOMS ────────────────────────────────────────────── */}
+      {step === 3 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {totalSymptoms > 0 && (
+            <div style={{ padding: "10px 16px", background: "rgba(0,232,122,0.08)", border: "1px solid rgba(0,232,122,0.2)", borderRadius: 10, fontSize: 13, fontWeight: 600, color: "var(--accent)", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)", display: "inline-block" }} />
+              {totalSymptoms} symptom{totalSymptoms !== 1 ? "s" : ""} selected
+            </div>
+          )}
+
+          <SymGroup label="🌡️ General">
+            <ChipGroup wrap>
+              <Chip label="Fever" icon="🌡️" active={form.fever} onClick={() => set("fever", !form.fever)} />
+              <Chip label="Chills" icon="🥶" active={form.chills} onClick={() => set("chills", !form.chills)} />
+              <Chip label="Fatigue" icon="😴" active={form.fatigue} onClick={() => set("fatigue", !form.fatigue)} />
+              <Chip label="Weakness" icon="💪" active={form.weakness} onClick={() => set("weakness", !form.weakness)} />
+              <Chip label="Sweating" icon="💧" active={form.sweating} onClick={() => set("sweating", !form.sweating)} />
+              <Chip label="Headache" icon="🤕" active={form.headache} onClick={() => set("headache", !form.headache)} />
+            </ChipGroup>
+          </SymGroup>
+
+          <SymGroup label="🫁 Respiratory">
+            <ChipGroup wrap>
+              <Chip label="Cough" icon="😮‍💨" active={form.cough} onClick={() => set("cough", !form.cough)} />
+              <Chip label="Short of Breath" icon="🫁" active={form.shortness_of_breath} onClick={() => set("shortness_of_breath", !form.shortness_of_breath)} />
+              <Chip label="Sore Throat" icon="🤒" active={form.sore_throat} onClick={() => set("sore_throat", !form.sore_throat)} />
+              <Chip label="Runny Nose" icon="🤧" active={form.runny_nose} onClick={() => set("runny_nose", !form.runny_nose)} />
+              <Chip label="Loss of Smell/Taste" icon="👃" active={form.loss_of_smell_taste} onClick={() => set("loss_of_smell_taste", !form.loss_of_smell_taste)} />
+            </ChipGroup>
+          </SymGroup>
+
+          <SymGroup label="🍽️ Digestive">
+            <ChipGroup wrap>
+              <Chip label="Nausea" icon="🤢" active={form.nausea} onClick={() => set("nausea", !form.nausea)} />
+              <Chip label="Vomiting" icon="🤮" active={form.vomiting} onClick={() => set("vomiting", !form.vomiting)} />
+              <Chip label="Diarrhoea" icon="🚽" active={form.diarrhea} onClick={() => set("diarrhea", !form.diarrhea)} />
+              <Chip label="Constipation" icon="😣" active={form.constipation} onClick={() => set("constipation", !form.constipation)} />
+              <Chip label="Abdominal Pain" icon="🫃" active={form.abdominal_pain} onClick={() => set("abdominal_pain", !form.abdominal_pain)} />
+              <Chip label="Loss of Appetite" icon="🍽️" active={form.loss_of_appetite} onClick={() => set("loss_of_appetite", !form.loss_of_appetite)} />
+            </ChipGroup>
+          </SymGroup>
+
+          <SymGroup label="💔 Pain">
+            <ChipGroup wrap>
+              <Chip label="Chest Pain" icon="💔" active={form.chest_pain} onClick={() => set("chest_pain", !form.chest_pain)} />
+              <Chip label="Joint Pain" icon="🦴" active={form.joint_pain} onClick={() => set("joint_pain", !form.joint_pain)} />
+              <Chip label="Muscle Pain" icon="💪" active={form.muscle_pain} onClick={() => set("muscle_pain", !form.muscle_pain)} />
+            </ChipGroup>
+          </SymGroup>
+
+          <SymGroup label="🧠 Neurological">
+            <ChipGroup wrap>
+              <Chip label="Confusion" icon="😵" active={form.confusion} onClick={() => set("confusion", !form.confusion)} />
+              <Chip label="Memory Loss" icon="🧠" active={form.memory_loss} onClick={() => set("memory_loss", !form.memory_loss)} />
+              <Chip label="Dizziness" icon="💫" active={form.dizziness} onClick={() => set("dizziness", !form.dizziness)} />
+              <Chip label="Numbness" icon="🖐️" active={form.numbness} onClick={() => set("numbness", !form.numbness)} />
+              <Chip label="Vision Issues" icon="👁️" active={form.vision_problems} onClick={() => set("vision_problems", !form.vision_problems)} />
+              <Chip label="Speech Issues" icon="💬" active={form.speech_problems} onClick={() => set("speech_problems", !form.speech_problems)} />
+              <Chip label="Personality Changes" icon="🎭" active={form.personality_changes} onClick={() => set("personality_changes", !form.personality_changes)} />
+              <Chip label="Behavioural Issues" icon="⚡" active={form.behavioral_problems} onClick={() => set("behavioral_problems", !form.behavioral_problems)} />
+            </ChipGroup>
+          </SymGroup>
+
+          <SymGroup label="🩹 Skin & Lymph">
+            <ChipGroup wrap>
+              <Chip label="Skin Rash" icon="🩹" active={form.skin_rash} onClick={() => set("skin_rash", !form.skin_rash)} />
+              <Chip label="Swollen Lymph Nodes" icon="🔵" active={form.swollen_lymph_nodes} onClick={() => set("swollen_lymph_nodes", !form.swollen_lymph_nodes)} />
+            </ChipGroup>
+          </SymGroup>
         </div>
       )}
 
       {/* Error */}
       {error && (
-        <div
-          style={{
-            marginTop: 20,
-            padding: "14px 18px",
-            background: "rgba(255,68,68,0.08)",
-            border: "1px solid rgba(255,68,68,0.3)",
-            borderRadius: 10,
-            fontSize: 13,
-            color: "#ff6b6b",
-            lineHeight: 1.6,
-          }}
-        >
-          ❌ {error}
+        <div style={{ marginTop: 20, padding: "14px 18px", background: "rgba(255,68,68,0.08)", border: "1px solid rgba(255,68,68,0.2)", borderRadius: 12, fontSize: 13, color: "rgba(255,120,120,0.9)", lineHeight: 1.7, whiteSpace: "pre-line" }}>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>❌ Error</div>
+          {error}
         </div>
       )}
 
       {/* Navigation */}
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          marginTop: 40,
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        {step > 1 ? (
-          <button className="hb-btn-outline" onClick={() => setStep(step - 1)}>
-            ← Back
-          </button>
-        ) : (
-          <div />
+      <div style={{ display: "flex", gap: 12, marginTop: 40 }}>
+        {step > 0 && (
+          <button onClick={() => setStep(s => s - 1)} style={{
+            flex: "0 0 auto", padding: "14px 24px",
+            background: "transparent", border: "1.5px solid rgba(255,255,255,0.1)",
+            borderRadius: 12, color: "rgba(255,255,255,0.45)", fontSize: 14, fontWeight: 600,
+            cursor: "pointer", fontFamily: "var(--font-sans)", transition: "all 0.2s",
+          }}>← Back</button>
         )}
-
-        {step < 4 ? (
-          <button
-            className="hb-btn"
-            onClick={() => setStep(step + 1)}
-            disabled={!canNext()}
-          >
-            Continue →
-          </button>
+        {step < 3 ? (
+          <button onClick={() => setStep(s => s + 1)} disabled={!canAdvance()} style={{
+            flex: 1, padding: "14px 24px",
+            background: canAdvance() ? "var(--accent)" : "rgba(255,255,255,0.06)",
+            border: "none", borderRadius: 12,
+            color: canAdvance() ? "#000" : "rgba(255,255,255,0.2)",
+            fontSize: 14, fontWeight: 700, cursor: canAdvance() ? "pointer" : "not-allowed",
+            fontFamily: "var(--font-sans)", transition: "all 0.25s",
+          }}>Continue →</button>
         ) : (
-          <button
-            className="hb-btn"
-            onClick={handlePredict}
-            disabled={loading}
-            style={{ minWidth: 180 }}
-          >
+          <button onClick={predict} disabled={loading} style={{
+            flex: 1, padding: "14px 24px",
+            background: loading ? "rgba(0,232,122,0.3)" : "var(--accent)",
+            border: "none", borderRadius: 12,
+            color: "#000", fontSize: 14, fontWeight: 700,
+            cursor: loading ? "not-allowed" : "pointer",
+            fontFamily: "var(--font-sans)", transition: "all 0.25s",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+          }}>
             {loading ? (
-              <span style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "center" }}>
-                <span
-                  style={{
-                    width: 16,
-                    height: 16,
-                    border: "2px solid rgba(0,0,0,0.3)",
-                    borderTopColor: "#000",
-                    borderRadius: "50%",
-                    animation: "spin 0.8s linear infinite",
-                    display: "inline-block",
-                  }}
-                />
-                Analysing...
-              </span>
-            ) : (
-              "Predict Disease →"
-            )}
+              <>
+                <span style={{ width: 16, height: 16, border: "2.5px solid rgba(0,0,0,0.2)", borderTopColor: "#000", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
+                Analysing…
+              </>
+            ) : "Predict Disease →"}
           </button>
         )}
       </div>
     </div>
   );
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function Section({ label }: { label: string }) {
+  return (
+    <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+      {label}
+    </div>
+  );
+}
+
+function ChipGroup({ children, wrap }: { children: React.ReactNode; wrap?: boolean }) {
+  return (
+    <div style={{ display: "flex", flexWrap: wrap ? "wrap" : "nowrap", gap: 8 }}>
+      {children}
+    </div>
+  );
+}
+
+function SymGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>
+        {label}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function SliderRow({
+  label, value, max, offset = 0, onChange, ticks, colorAt, displayVal,
+}: {
+  label: string; value: number; max: number; offset?: number;
+  onChange: (v: number) => void; ticks: string[];
+  colorAt: (v: number) => string; displayVal?: number;
+}) {
+  const v = value - offset;
+  const color = colorAt(v);
+  const pct = (v / max) * 100;
+  const shown = displayVal !== undefined ? displayVal : value;
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.55)" }}>{label}</div>
+        <div style={{ fontSize: 26, fontWeight: 800, color, lineHeight: 1, fontFamily: "var(--font-serif)", minWidth: 32, textAlign: "right" }}>{shown}</div>
+      </div>
+      <input
+        suppressHydrationWarning
+        type="range" min={0} max={max} value={v}
+        onChange={e => onChange(+e.target.value + offset)}
+        style={{
+          width: "100%", height: 5, borderRadius: 3, cursor: "pointer",
+          background: `linear-gradient(to right, ${color} ${pct}%, rgba(255,255,255,0.08) ${pct}%)`,
+          appearance: "none", outline: "none", marginBottom: 8,
+        }}
+      />
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        {ticks.map((t, i) => (
+          <div key={i} style={{ fontSize: 10, color: i === v ? color : "rgba(255,255,255,0.2)", fontWeight: i === v ? 700 : 400, transition: "color 0.2s", textAlign: "center", flex: 1 }}>
+            {t}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Shared styles
+const lbl: React.CSSProperties = {
+  fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)",
+  letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12, display: "block",
+};
+const inp: React.CSSProperties = {
+  width: "100%", background: "rgba(255,255,255,0.04)",
+  border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 14,
+  color: "rgba(255,255,255,0.9)", fontFamily: "var(--font-sans)",
+  fontSize: 16, padding: "14px 18px", outline: "none", boxSizing: "border-box",
+  transition: "border-color 0.2s",
+};
+const hint: React.CSSProperties = {
+  fontSize: 12, color: "rgba(255,255,255,0.25)", marginTop: 8, lineHeight: 1.5,
+};

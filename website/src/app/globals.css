@@ -320,3 +320,34 @@ body {
     0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
+
+/* ── Slider thumb cross-browser ── */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 5px rgba(0,232,122,0.15);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid rgba(0,0,0,0.1);
+  cursor: pointer;
+}
+
+/* ── Number input focus ── */
+input[type="number"]:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(0,232,122,0.1) !important;
+}
