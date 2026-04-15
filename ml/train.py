@@ -74,3 +74,5 @@ print("   models/disease_model.pkl")
 print("   models/label_encoder.pkl")
 print("   models/columns.pkl")
 print("   models/cat_encoders.pkl")
+
+

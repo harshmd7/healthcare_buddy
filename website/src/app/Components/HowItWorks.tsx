@@ -5,25 +5,25 @@ const steps = [
     num: "01",
     title: "Enter Your Health Profile",
     desc: "Provide basic vitals — age, gender, BMI, blood pressure, glucose levels, and whether you have pre-existing conditions like hypertension or heart disease.",
-    icon: "👤",
+    icon: "",
   },
   {
     num: "02",
     title: "Report Your Symptoms",
     desc: "Toggle which symptoms you're experiencing: fatigue, chest pain, headache, neurological changes, skin issues, and 15+ more clinical indicators.",
-    icon: "🩺",
+    icon: "",
   },
   {
     num: "03",
     title: "AI Analyses the Data",
     desc: "Our RandomForest model—trained on 7 real clinical datasets—computes risk scores, feature interactions, and BMI/age groupings before making its prediction.",
-    icon: "🧠",
+    icon: "",
   },
   {
     num: "04",
     title: "Get Instant Diagnosis",
     desc: "Receive a clear, instant disease prediction with the identified condition highlighted. Always follow up with a licensed physician for confirmation.",
-    icon: "✅",
+    icon: "",
   },
 ];
 

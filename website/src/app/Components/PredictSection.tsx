@@ -79,7 +79,7 @@ export default function PredictSection() {
 
             {/* Backend notice */}
             <div style={{ background: "rgba(255,170,0,0.05)", border: "1px solid rgba(255,170,0,0.15)", borderRadius: 14, padding: "18px 20px" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,170,0,0.7)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>⚙ Backend</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,170,0,0.7)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>Backend</div>
               <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.6, marginBottom: 10 }}>Start FastAPI before predicting:</p>
               <code style={{ display: "block", fontSize: 11, color: "var(--accent)", background: "rgba(0,0,0,0.3)", padding: "8px 12px", borderRadius: 8, fontFamily: "monospace", wordBreak: "break-all", lineHeight: 1.6 }}>
                 python -m uvicorn app:app --reload

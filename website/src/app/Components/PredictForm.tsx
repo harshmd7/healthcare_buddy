@@ -129,22 +129,22 @@ function SeverityDot({ value, max, color }: { value: number; max: number; color:
 }
 
 const DISEASE_META: Record<string, { icon: string; color: string }> = {
-  "Brain Stroke":        { icon: "🧠", color: "#ff6b6b" },
-  "Heart Disease":       { icon: "❤️", color: "#ff4444" },
-  "COVID-19":            { icon: "🦠", color: "#00b4d8" },
-  "Pneumonia":           { icon: "🫁", color: "#7b9cff" },
-  "Tuberculosis":        { icon: "🫁", color: "#c77dff" },
-  "Dengue":              { icon: "🦟", color: "#f9c74f" },
-  "Alzheimer's Disease": { icon: "🧠", color: "#ff9f43" },
-  "No Disease":          { icon: "✅", color: "#00e87a" },
-  "Typhoid":             { icon: "🌡️", color: "#ffd166" },
-  "Malaria":             { icon: "🦟", color: "#06d6a0" },
-  "Diabetes":            { icon: "💉", color: "#a8dadc" },
+  "Brain Stroke":        { icon: "", color: "#ff6b6b" },
+  "Heart Disease":       { icon: "", color: "#ff4444" },
+  "COVID-19":            { icon: "", color: "#00b4d8" },
+  "Pneumonia":           { icon: "", color: "#7b9cff" },
+  "Tuberculosis":        { icon: "", color: "#c77dff" },
+  "Dengue":              { icon: "", color: "#f9c74f" },
+  "Alzheimer's Disease": { icon: "", color: "#ff9f43" },
+  "No Disease":          { icon: "", color: "#00e87a" },
+  "Typhoid":             { icon: "", color: "#ffd166" },
+  "Malaria":             { icon: "", color: "#06d6a0" },
+  "Diabetes":            { icon: "", color: "#a8dadc" },
 };
 
 // ─── STEPS ───────────────────────────────────────────────────────────────────
 const STEPS = ["Profile", "History", "Condition", "Symptoms"];
-const STEP_ICONS = ["👤", "📋", "🩺", "🔍"];
+const STEP_ICONS = ["", "", "", ""];
 
 export default function PredictForm() {
   const [form, setForm] = useState<F>(DEF);
@@ -192,7 +192,7 @@ export default function PredictForm() {
 
   // ── RESULT SCREEN ────────────────────────────────────────────────────────
   if (result) {
-    const meta = DISEASE_META[result] ?? { icon: "🩺", color: "var(--accent)" };
+    const meta = DISEASE_META[result] ?? { icon: "", color: "var(--accent)" };
     const isHealthy = result === "No Disease";
     return (
       <div style={{ textAlign: "center", padding: "8px 0" }}>
@@ -227,7 +227,7 @@ export default function PredictForm() {
           </div>
         ) : (
           <div style={{ background: "rgba(255,170,0,0.07)", border: "1px solid rgba(255,170,0,0.2)", borderRadius: 14, padding: "18px 24px", marginBottom: 28, maxWidth: 460, margin: "0 auto 28px" }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#ffaa00", marginBottom: 8 }}>⚠ Medical Disclaimer</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#ffaa00", marginBottom: 8 }}>Medical Disclaimer</div>
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.7 }}>
               This is an AI-based prediction for informational purposes only. It is <strong style={{ color: "rgba(255,255,255,0.8)" }}>not a diagnosis</strong>. Please consult a qualified healthcare professional.
             </div>
@@ -303,7 +303,7 @@ export default function PredictForm() {
           <div>
             <label style={lbl}>Biological Sex</label>
             <div style={{ display: "flex", gap: 12 }}>
-              {[{ v: "0", l: "Male", i: "♂" }, { v: "1", l: "Female", i: "♀" }].map(g => (
+              {[{ v: "0", l: "Male", i: "" }, { v: "1", l: "Female", i: "" }].map(g => (
                 <button key={g.v} onClick={() => set("gender", g.v)} style={{
                   flex: 1, padding: "20px 12px",
                   background: form.gender === g.v ? "rgba(0,232,122,0.1)" : "rgba(255,255,255,0.03)",
@@ -323,10 +323,10 @@ export default function PredictForm() {
             <label style={lbl}>Weight Category</label>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {[
-                { v: "underweight", l: "Underweight", s: "BMI < 18.5", i: "📉" },
-                { v: "normal",      l: "Normal",      s: "BMI 18.5–24.9", i: "✅" },
-                { v: "overweight",  l: "Overweight",  s: "BMI 25–29.9", i: "📊" },
-                { v: "obese",       l: "Obese",       s: "BMI ≥ 30", i: "📈" },
+                { v: "underweight", l: "Underweight", s: "BMI < 18.5", i: "" },
+                { v: "normal",      l: "Normal",      s: "BMI 18.5–24.9", i: "" },
+                { v: "overweight",  l: "Overweight",  s: "BMI 25–29.9", i: "" },
+                { v: "obese",       l: "Obese",       s: "BMI ≥ 30", i: "" },
               ].map(w => {
                 const act = form.weight_category === w.v;
                 return (
@@ -350,27 +350,27 @@ export default function PredictForm() {
       {/* ── STEP 1: HISTORY ─────────────────────────────────────────────── */}
       {step === 1 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <Section label="🏃 Lifestyle" />
+          <Section label="Lifestyle" />
           <ChipGroup>
-            <Chip label="Smoker" icon="🚬" active={form.smoking} onClick={() => set("smoking", !form.smoking)} />
-            <Chip label="Alcohol" icon="🍺" active={form.alcohol_consumption} onClick={() => set("alcohol_consumption", !form.alcohol_consumption)} />
-            <Chip label="Recent Travel" icon="✈️" active={form.recent_travel} onClick={() => set("recent_travel", !form.recent_travel)} />
-            <Chip label="High-Risk Lifestyle" icon="⚠️" active={form.high_risk_lifestyle} onClick={() => set("high_risk_lifestyle", !form.high_risk_lifestyle)} />
+            <Chip label="Smoker" icon="" active={form.smoking} onClick={() => set("smoking", !form.smoking)} />
+            <Chip label="Alcohol" icon="" active={form.alcohol_consumption} onClick={() => set("alcohol_consumption", !form.alcohol_consumption)} />
+            <Chip label="Recent Travel" icon="" active={form.recent_travel} onClick={() => set("recent_travel", !form.recent_travel)} />
+            <Chip label="High-Risk Lifestyle" icon="" active={form.high_risk_lifestyle} onClick={() => set("high_risk_lifestyle", !form.high_risk_lifestyle)} />
           </ChipGroup>
 
           <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
 
-          <Section label="🏥 Medical History" />
+          <Section label="Medical History" />
           <ChipGroup>
-            <Chip label="Family History" icon="🧬" active={form.family_history} onClick={() => set("family_history", !form.family_history)} />
-            <Chip label="Diabetes" icon="💉" active={form.pre_existing_diabetes} onClick={() => set("pre_existing_diabetes", !form.pre_existing_diabetes)} />
-            <Chip label="Hypertension" icon="💊" active={form.pre_existing_hypertension} onClick={() => set("pre_existing_hypertension", !form.pre_existing_hypertension)} />
-            <Chip label="Heart Condition" icon="❤️" active={form.pre_existing_heart_condition} onClick={() => set("pre_existing_heart_condition", !form.pre_existing_heart_condition)} />
+            <Chip label="Family History" icon="" active={form.family_history} onClick={() => set("family_history", !form.family_history)} />
+            <Chip label="Diabetes" icon="" active={form.pre_existing_diabetes} onClick={() => set("pre_existing_diabetes", !form.pre_existing_diabetes)} />
+            <Chip label="Hypertension" icon="" active={form.pre_existing_hypertension} onClick={() => set("pre_existing_hypertension", !form.pre_existing_hypertension)} />
+            <Chip label="Heart Condition" icon="" active={form.pre_existing_heart_condition} onClick={() => set("pre_existing_heart_condition", !form.pre_existing_heart_condition)} />
           </ChipGroup>
 
           {(form.pre_existing_diabetes || form.pre_existing_hypertension || form.pre_existing_heart_condition) && (
             <div style={{ padding: "12px 16px", background: "rgba(255,107,107,0.07)", border: "1px solid rgba(255,107,107,0.15)", borderRadius: 10, fontSize: 12, color: "rgba(255,150,150,0.8)", lineHeight: 1.6 }}>
-              ⚕ Pre-existing conditions noted — these significantly influence risk scoring.
+              Pre-existing conditions noted — these significantly influence risk scoring.
             </div>
           )}
         </div>
@@ -393,9 +393,9 @@ export default function PredictForm() {
             {form.days_since_onset !== "" && (() => {
               const d = +form.days_since_onset;
               const [bg, brd, col, msg] =
-                d <= 14  ? ["rgba(0,232,122,0.07)","rgba(0,232,122,0.2)","var(--accent)","⚡ Acute — 0 to 14 days"] :
-                d <= 90  ? ["rgba(255,170,0,0.07)","rgba(255,170,0,0.2)","#ffaa00","⚠ Sub-acute — 15 to 90 days"] :
-                           ["rgba(255,68,68,0.07)","rgba(255,68,68,0.2)","#ff6b6b","🔴 Chronic — over 90 days"];
+                d <= 14  ? ["rgba(0,232,122,0.07)","rgba(0,232,122,0.2)","var(--accent)","Acute — 0 to 14 days"] :
+                d <= 90  ? ["rgba(255,170,0,0.07)","rgba(255,170,0,0.2)","#ffaa00","Sub-acute — 15 to 90 days"] :
+                           ["rgba(255,68,68,0.07)","rgba(255,68,68,0.2)","#ff6b6b","Chronic — over 90 days"];
               return (
                 <div style={{ marginTop: 12, padding: "10px 16px", background: bg, border: `1px solid ${brd}`, borderRadius: 10, fontSize: 13, fontWeight: 600, color: col }}>
                   {msg}
@@ -437,63 +437,63 @@ export default function PredictForm() {
             </div>
           )}
 
-          <SymGroup label="🌡️ General">
+          <SymGroup label="General">
             <ChipGroup wrap>
-              <Chip label="Fever" icon="🌡️" active={form.fever} onClick={() => set("fever", !form.fever)} />
-              <Chip label="Chills" icon="🥶" active={form.chills} onClick={() => set("chills", !form.chills)} />
-              <Chip label="Fatigue" icon="😴" active={form.fatigue} onClick={() => set("fatigue", !form.fatigue)} />
-              <Chip label="Weakness" icon="💪" active={form.weakness} onClick={() => set("weakness", !form.weakness)} />
-              <Chip label="Sweating" icon="💧" active={form.sweating} onClick={() => set("sweating", !form.sweating)} />
-              <Chip label="Headache" icon="🤕" active={form.headache} onClick={() => set("headache", !form.headache)} />
+              <Chip label="Fever" icon="" active={form.fever} onClick={() => set("fever", !form.fever)} />
+              <Chip label="Chills" icon="" active={form.chills} onClick={() => set("chills", !form.chills)} />
+              <Chip label="Fatigue" icon="" active={form.fatigue} onClick={() => set("fatigue", !form.fatigue)} />
+              <Chip label="Weakness" icon="" active={form.weakness} onClick={() => set("weakness", !form.weakness)} />
+              <Chip label="Sweating" icon="" active={form.sweating} onClick={() => set("sweating", !form.sweating)} />
+              <Chip label="Headache" icon="" active={form.headache} onClick={() => set("headache", !form.headache)} />
             </ChipGroup>
           </SymGroup>
 
-          <SymGroup label="🫁 Respiratory">
+          <SymGroup label="Respiratory">
             <ChipGroup wrap>
-              <Chip label="Cough" icon="😮‍💨" active={form.cough} onClick={() => set("cough", !form.cough)} />
-              <Chip label="Short of Breath" icon="🫁" active={form.shortness_of_breath} onClick={() => set("shortness_of_breath", !form.shortness_of_breath)} />
-              <Chip label="Sore Throat" icon="🤒" active={form.sore_throat} onClick={() => set("sore_throat", !form.sore_throat)} />
-              <Chip label="Runny Nose" icon="🤧" active={form.runny_nose} onClick={() => set("runny_nose", !form.runny_nose)} />
-              <Chip label="Loss of Smell/Taste" icon="👃" active={form.loss_of_smell_taste} onClick={() => set("loss_of_smell_taste", !form.loss_of_smell_taste)} />
+              <Chip label="Cough" icon="" active={form.cough} onClick={() => set("cough", !form.cough)} />
+              <Chip label="Short of Breath" icon="" active={form.shortness_of_breath} onClick={() => set("shortness_of_breath", !form.shortness_of_breath)} />
+              <Chip label="Sore Throat" icon="" active={form.sore_throat} onClick={() => set("sore_throat", !form.sore_throat)} />
+              <Chip label="Runny Nose" icon="" active={form.runny_nose} onClick={() => set("runny_nose", !form.runny_nose)} />
+              <Chip label="Loss of Smell/Taste" icon="" active={form.loss_of_smell_taste} onClick={() => set("loss_of_smell_taste", !form.loss_of_smell_taste)} />
             </ChipGroup>
           </SymGroup>
 
-          <SymGroup label="🍽️ Digestive">
+          <SymGroup label="Digestive">
             <ChipGroup wrap>
-              <Chip label="Nausea" icon="🤢" active={form.nausea} onClick={() => set("nausea", !form.nausea)} />
-              <Chip label="Vomiting" icon="🤮" active={form.vomiting} onClick={() => set("vomiting", !form.vomiting)} />
-              <Chip label="Diarrhoea" icon="🚽" active={form.diarrhea} onClick={() => set("diarrhea", !form.diarrhea)} />
-              <Chip label="Constipation" icon="😣" active={form.constipation} onClick={() => set("constipation", !form.constipation)} />
-              <Chip label="Abdominal Pain" icon="🫃" active={form.abdominal_pain} onClick={() => set("abdominal_pain", !form.abdominal_pain)} />
-              <Chip label="Loss of Appetite" icon="🍽️" active={form.loss_of_appetite} onClick={() => set("loss_of_appetite", !form.loss_of_appetite)} />
+              <Chip label="Nausea" icon="" active={form.nausea} onClick={() => set("nausea", !form.nausea)} />
+              <Chip label="Vomiting" icon="" active={form.vomiting} onClick={() => set("vomiting", !form.vomiting)} />
+              <Chip label="Diarrhoea" icon="" active={form.diarrhea} onClick={() => set("diarrhea", !form.diarrhea)} />
+              <Chip label="Constipation" icon="" active={form.constipation} onClick={() => set("constipation", !form.constipation)} />
+              <Chip label="Abdominal Pain" icon="" active={form.abdominal_pain} onClick={() => set("abdominal_pain", !form.abdominal_pain)} />
+              <Chip label="Loss of Appetite" icon="" active={form.loss_of_appetite} onClick={() => set("loss_of_appetite", !form.loss_of_appetite)} />
             </ChipGroup>
           </SymGroup>
 
-          <SymGroup label="💔 Pain">
+          <SymGroup label="Pain">
             <ChipGroup wrap>
-              <Chip label="Chest Pain" icon="💔" active={form.chest_pain} onClick={() => set("chest_pain", !form.chest_pain)} />
-              <Chip label="Joint Pain" icon="🦴" active={form.joint_pain} onClick={() => set("joint_pain", !form.joint_pain)} />
-              <Chip label="Muscle Pain" icon="💪" active={form.muscle_pain} onClick={() => set("muscle_pain", !form.muscle_pain)} />
+              <Chip label="Chest Pain" icon="" active={form.chest_pain} onClick={() => set("chest_pain", !form.chest_pain)} />
+              <Chip label="Joint Pain" icon="" active={form.joint_pain} onClick={() => set("joint_pain", !form.joint_pain)} />
+              <Chip label="Muscle Pain" icon="" active={form.muscle_pain} onClick={() => set("muscle_pain", !form.muscle_pain)} />
             </ChipGroup>
           </SymGroup>
 
-          <SymGroup label="🧠 Neurological">
+          <SymGroup label="Neurological">
             <ChipGroup wrap>
-              <Chip label="Confusion" icon="😵" active={form.confusion} onClick={() => set("confusion", !form.confusion)} />
-              <Chip label="Memory Loss" icon="🧠" active={form.memory_loss} onClick={() => set("memory_loss", !form.memory_loss)} />
-              <Chip label="Dizziness" icon="💫" active={form.dizziness} onClick={() => set("dizziness", !form.dizziness)} />
-              <Chip label="Numbness" icon="🖐️" active={form.numbness} onClick={() => set("numbness", !form.numbness)} />
-              <Chip label="Vision Issues" icon="👁️" active={form.vision_problems} onClick={() => set("vision_problems", !form.vision_problems)} />
-              <Chip label="Speech Issues" icon="💬" active={form.speech_problems} onClick={() => set("speech_problems", !form.speech_problems)} />
-              <Chip label="Personality Changes" icon="🎭" active={form.personality_changes} onClick={() => set("personality_changes", !form.personality_changes)} />
-              <Chip label="Behavioural Issues" icon="⚡" active={form.behavioral_problems} onClick={() => set("behavioral_problems", !form.behavioral_problems)} />
+              <Chip label="Confusion" icon="" active={form.confusion} onClick={() => set("confusion", !form.confusion)} />
+              <Chip label="Memory Loss" icon="" active={form.memory_loss} onClick={() => set("memory_loss", !form.memory_loss)} />
+              <Chip label="Dizziness" icon="" active={form.dizziness} onClick={() => set("dizziness", !form.dizziness)} />
+              <Chip label="Numbness" icon="" active={form.numbness} onClick={() => set("numbness", !form.numbness)} />
+              <Chip label="Vision Issues" icon="" active={form.vision_problems} onClick={() => set("vision_problems", !form.vision_problems)} />
+              <Chip label="Speech Issues" icon="" active={form.speech_problems} onClick={() => set("speech_problems", !form.speech_problems)} />
+              <Chip label="Personality Changes" icon="" active={form.personality_changes} onClick={() => set("personality_changes", !form.personality_changes)} />
+              <Chip label="Behavioural Issues" icon="" active={form.behavioral_problems} onClick={() => set("behavioral_problems", !form.behavioral_problems)} />
             </ChipGroup>
           </SymGroup>
 
-          <SymGroup label="🩹 Skin & Lymph">
+          <SymGroup label="Skin & Lymph">
             <ChipGroup wrap>
-              <Chip label="Skin Rash" icon="🩹" active={form.skin_rash} onClick={() => set("skin_rash", !form.skin_rash)} />
-              <Chip label="Swollen Lymph Nodes" icon="🔵" active={form.swollen_lymph_nodes} onClick={() => set("swollen_lymph_nodes", !form.swollen_lymph_nodes)} />
+              <Chip label="Skin Rash" icon="" active={form.skin_rash} onClick={() => set("skin_rash", !form.skin_rash)} />
+              <Chip label="Swollen Lymph Nodes" icon="" active={form.swollen_lymph_nodes} onClick={() => set("swollen_lymph_nodes", !form.swollen_lymph_nodes)} />
             </ChipGroup>
           </SymGroup>
         </div>
@@ -502,7 +502,7 @@ export default function PredictForm() {
       {/* Error */}
       {error && (
         <div style={{ marginTop: 20, padding: "14px 18px", background: "rgba(255,68,68,0.08)", border: "1px solid rgba(255,68,68,0.2)", borderRadius: 12, fontSize: 13, color: "rgba(255,120,120,0.9)", lineHeight: 1.7, whiteSpace: "pre-line" }}>
-          <div style={{ fontWeight: 700, marginBottom: 4 }}>❌ Error</div>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>Error</div>
           {error}
         </div>
       )}
