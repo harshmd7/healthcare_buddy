@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Doctor {
+  id             String   @id @default(cuid())
+  name           String
+  specialization String // e.g. "Cardiologist", "Neurologist", "General Physician"
+  available      Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  cases Case[]
+}
+
+model Case {
+  id     String @id @default(cuid())
+  status String @default("pending") // pending -> in_review -> completed
+
+  // snapshot of the symptom form submitted by the patient
+  symptomsJson String
+
+  // ML output
+  predictedDisease String
+  confidence       Float
+  top3Json         String // JSON string of [{disease, confidence}, ...]
+
+  // doctor's verified outcome (this is the feedback-loop data)
+  confirmedDisease String?
+  doctorNote       String?
+
+  doctorId String?
+  doctor   Doctor? @relation(fields: [doctorId], references: [id])
+
+  patientName String  @default("Anonymous Patient")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
