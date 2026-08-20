@@ -1,4 +1,4 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This app now connects the Next.js frontend, Clerk authentication, Prisma persistence, and the FastAPI ML backend.
 
 ## Getting Started
 
@@ -16,7 +16,19 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+You can start editing the page by modifying `src/app/page.tsx`. The page auto-updates as you edit the file.
+
+Before running the app, make sure you have:
+
+- set `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, and `CLERK_SECRET_KEY` in `.env`
+- generated the Prisma client and applied the migration for the `Prediction` table
+- started the FastAPI server from the `ml/` folder with `python -m uvicorn app:app --reload`
+
+To generate and migrate the database schema:
+
+```bash
+npx prisma migrate dev --name add-predictions
+```
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 

@@ -1,16 +1,21 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
 }
 
 model Doctor {
   id             String   @id @default(cuid())
   name           String
-  specialization String // e.g. "Cardiologist", "Neurologist", "General Physician"
+  specialization String
   available      Boolean  @default(true)
   createdAt      DateTime @default(now())
 
@@ -18,26 +23,28 @@ model Doctor {
 }
 
 model Case {
-  id     String @id @default(cuid())
-  status String @default("pending") // pending -> in_review -> completed
-
-  // snapshot of the symptom form submitted by the patient
-  symptomsJson String
-
-  // ML output
+  id              String   @id @default(cuid())
+  status          String   @default("pending")
+  symptomsJson    String
   predictedDisease String
-  confidence       Float
-  top3Json         String // JSON string of [{disease, confidence}, ...]
-
-  // doctor's verified outcome (this is the feedback-loop data)
+  confidence      Float
+  top3Json        String
   confirmedDisease String?
-  doctorNote       String?
+  doctorNote      String?
+  doctorId        String?
+  doctor          Doctor?  @relation(fields: [doctorId], references: [id])
+  patientName     String   @default("Anonymous Patient")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
 
-  doctorId String?
-  doctor   Doctor? @relation(fields: [doctorId], references: [id])
+model Prediction {
+  id         String   @id @default(cuid())
+  userId     String?
+  disease    String
+  confidence String?
+  inputData  Json
+  createdAt  DateTime @default(now())
 
-  patientName String  @default("Anonymous Patient")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@index([userId, createdAt])
 }

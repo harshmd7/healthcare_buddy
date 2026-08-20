@@ -1,26 +1,31 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../src/generated/prisma/client";
+import { Pool } from "pg";
 
-const prisma = new PrismaClient();
+const connectionString = process.env.DATABASE_URL;
 
-const doctors = [
-  { name: "Dr. Anjali Sharma", specialization: "Cardiologist" },
-  { name: "Dr. Rohan Mehta", specialization: "Neurologist" },
-  { name: "Dr. Priya Nair", specialization: "Pulmonologist" },
-  { name: "Dr. Karan Verma", specialization: "General Physician" },
-  { name: "Dr. Sneha Kulkarni", specialization: "Endocrinologist" },
-];
+if (!connectionString) {
+  throw new Error("DATABASE_URL is missing");
+}
+
+const pool = new Pool({ connectionString });
+const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
 async function main() {
-  for (const doc of doctors) {
-    const existing = await prisma.doctor.findFirst({
-      where: { name: doc.name },
+  const existing = await prisma.prediction.count();
+
+  if (existing === 0) {
+    await prisma.prediction.create({
+      data: {
+        userId: null,
+        disease: "No Disease",
+        confidence: "demo",
+        inputData: { seeded: true },
+      },
     });
-    if (!existing) {
-      await prisma.doctor.create({ data: doc });
-      console.log(`Created ${doc.name} (${doc.specialization})`);
-    } else {
-      console.log(`Skipped ${doc.name}, already exists`);
-    }
+    console.log("Created demo prediction seed");
+  } else {
+    console.log("Skipped seed, prediction data already exists");
   }
 }
 

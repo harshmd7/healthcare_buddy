@@ -41,54 +41,83 @@ const DEF: F = {
   sweating: false, loss_of_smell_taste: false, swollen_lymph_nodes: false,
 };
 
-// ─── Encoders / Derived features ─────────────────────────────────────────────
-function ageGroup(a: number) {
-  if (a < 13) return 1; if (a < 18) return 4; if (a < 30) return 5;
-  if (a < 45) return 0; if (a < 65) return 2; return 3;
-}
-const wtMap: Record<string, number> = { normal: 0, obese: 1, overweight: 2, underweight: 3 };
-
 function buildPayload(f: F) {
   const age = +f.age || 0;
   const b = (v: boolean) => v ? 1 : 0;
-  const days = +f.days_since_onset || 0;
-  const allBool = [f.fever,f.chills,f.headache,f.fatigue,f.weakness,f.nausea,f.vomiting,
-    f.diarrhea,f.constipation,f.chest_pain,f.shortness_of_breath,f.skin_rash,f.joint_pain,
-    f.muscle_pain,f.sore_throat,f.cough,f.runny_nose,f.loss_of_appetite,f.abdominal_pain,
-    f.confusion,f.memory_loss,f.dizziness,f.numbness,f.vision_problems,f.speech_problems,
-    f.personality_changes,f.behavioral_problems,f.sweating,f.loss_of_smell_taste,f.swollen_lymph_nodes];
+  const ageGroup = (a: number) => {
+    if (a < 13) return 1;
+    if (a < 18) return 4;
+    if (a < 30) return 5;
+    if (a < 45) return 0;
+    if (a < 65) return 2;
+    return 3;
+  };
+
+  const wtMap: Record<string, number> = { normal: 0, obese: 1, overweight: 2, underweight: 3 };
+  const symptomCount = [
+    f.fever, f.chills, f.headache, f.fatigue, f.weakness, f.nausea,
+    f.vomiting, f.diarrhea, f.constipation, f.chest_pain, f.shortness_of_breath,
+    f.skin_rash, f.joint_pain, f.muscle_pain, f.sore_throat, f.cough,
+    f.runny_nose, f.loss_of_appetite, f.abdominal_pain, f.confusion,
+    f.memory_loss, f.dizziness, f.numbness, f.vision_problems, f.speech_problems,
+    f.personality_changes, f.behavioral_problems, f.sweating,
+    f.loss_of_smell_taste, f.swollen_lymph_nodes,
+  ].filter(Boolean).length;
+  
   return {
-    age, gender: +f.gender, weight_category: wtMap[f.weight_category] ?? 0,
-    smoking: b(f.smoking), alcohol_consumption: b(f.alcohol_consumption),
-    recent_travel: b(f.recent_travel), family_history: b(f.family_history),
-    high_risk_lifestyle: b(f.smoking) | b(f.alcohol_consumption),
+    // Profile
+    age,
+    gender: +f.gender,
+    weight_category: wtMap[f.weight_category] ?? 0,
+    days_since_onset: +f.days_since_onset || 0,
+    pain_severity: +f.pain_severity || 0,
+    fever_severity: +f.fever_severity || 0,
+    severity_score: +f.severity_score || 0,
+    
+    // Lifestyle & History
+    smoking: b(f.smoking),
+    alcohol_consumption: b(f.alcohol_consumption),
+    recent_travel: b(f.recent_travel),
+    family_history: b(f.family_history),
     pre_existing_diabetes: b(f.pre_existing_diabetes),
     pre_existing_hypertension: b(f.pre_existing_hypertension),
     pre_existing_heart_condition: b(f.pre_existing_heart_condition),
-    days_since_onset: days, pain_severity: +f.pain_severity || 0,
-    fever_severity: +f.fever_severity || 0, severity_score: +f.severity_score || 1,
-    fever: b(f.fever), chills: b(f.chills), headache: b(f.headache), fatigue: b(f.fatigue),
-    weakness: b(f.weakness), nausea: b(f.nausea), vomiting: b(f.vomiting),
-    diarrhea: b(f.diarrhea), constipation: b(f.constipation), chest_pain: b(f.chest_pain),
-    shortness_of_breath: b(f.shortness_of_breath), skin_rash: b(f.skin_rash),
-    joint_pain: b(f.joint_pain), muscle_pain: b(f.muscle_pain),
-    sore_throat: b(f.sore_throat), cough: b(f.cough), runny_nose: b(f.runny_nose),
-    loss_of_appetite: b(f.loss_of_appetite), abdominal_pain: b(f.abdominal_pain),
-    confusion: b(f.confusion), memory_loss: b(f.memory_loss), dizziness: b(f.dizziness),
-    numbness: b(f.numbness), vision_problems: b(f.vision_problems),
-    speech_problems: b(f.speech_problems), personality_changes: b(f.personality_changes),
-    behavioral_problems: b(f.behavioral_problems), sweating: b(f.sweating),
-    loss_of_smell_taste: b(f.loss_of_smell_taste), swollen_lymph_nodes: b(f.swollen_lymph_nodes),
-    symptom_count: allBool.filter(Boolean).length,
-    neurological_score: [f.confusion,f.memory_loss,f.numbness,f.vision_problems,f.speech_problems].filter(Boolean).length,
-    infection_score: [f.fever,f.chills,f.sweating,f.swollen_lymph_nodes,f.loss_of_smell_taste,f.skin_rash,f.recent_travel].filter(Boolean).length,
-    respiratory_score: [f.cough,f.shortness_of_breath,f.sore_throat,f.runny_nose,f.chest_pain].filter(Boolean).length,
-    gi_score: [f.nausea,f.vomiting,f.diarrhea,f.constipation,f.abdominal_pain].filter(Boolean).length,
-    pain_score: [f.headache,f.joint_pain,f.muscle_pain,f.chest_pain,f.abdominal_pain].filter(Boolean).length,
-    comorbidity_count: b(f.pre_existing_diabetes)+b(f.pre_existing_hypertension)+b(f.pre_existing_heart_condition),
+    
+    // Symptoms
+    fever: b(f.fever),
+    chills: b(f.chills),
+    headache: b(f.headache),
+    fatigue: b(f.fatigue),
+    weakness: b(f.weakness),
+    nausea: b(f.nausea),
+    vomiting: b(f.vomiting),
+    diarrhea: b(f.diarrhea),
+    constipation: b(f.constipation),
+    chest_pain: b(f.chest_pain),
+    shortness_of_breath: b(f.shortness_of_breath),
+    skin_rash: b(f.skin_rash),
+    joint_pain: b(f.joint_pain),
+    muscle_pain: b(f.muscle_pain),
+    sore_throat: b(f.sore_throat),
+    cough: b(f.cough),
+    runny_nose: b(f.runny_nose),
+    loss_of_appetite: b(f.loss_of_appetite),
+    abdominal_pain: b(f.abdominal_pain),
+    confusion: b(f.confusion),
+    memory_loss: b(f.memory_loss),
+    dizziness: b(f.dizziness),
+    numbness: b(f.numbness),
+    vision_problems: b(f.vision_problems),
+    speech_problems: b(f.speech_problems),
+    personality_changes: b(f.personality_changes),
+    behavioral_problems: b(f.behavioral_problems),
+    sweating: b(f.sweating),
+    loss_of_smell_taste: b(f.loss_of_smell_taste),
+    swollen_lymph_nodes: b(f.swollen_lymph_nodes),
+    
+    // Derived feature
     age_group: ageGroup(age),
-    is_chronic: days > 90 ? 1 : 0,
-    is_acute: days <= 14 ? 1 : 0,
+    symptom_count: symptomCount,
   };
 }
 
@@ -111,20 +140,6 @@ function Chip({ label, icon, active, onClick }: { label: string; icon?: string; 
         <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", flexShrink: 0 }} />
       )}
     </button>
-  );
-}
-
-function SeverityDot({ value, max, color }: { value: number; max: number; color: string }) {
-  return (
-    <div style={{ display: "flex", gap: 4 }}>
-      {Array.from({ length: max + 1 }).map((_, i) => (
-        <div key={i} style={{
-          width: i === 0 ? 8 : 8, height: 8, borderRadius: "50%",
-          background: i <= value ? color : "rgba(255,255,255,0.1)",
-          transition: "background 0.15s",
-        }} />
-      ))}
-    </div>
   );
 }
 

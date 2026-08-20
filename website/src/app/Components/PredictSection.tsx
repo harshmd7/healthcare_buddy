@@ -1,5 +1,6 @@
 "use client";
 import PredictForm from "./PredictForm";
+import PredictionHistory from "./PredictionHistory";
 
 export default function PredictSection() {
   return (
@@ -65,9 +66,9 @@ export default function PredictSection() {
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {[
                   { val: "935K", lbl: "Training samples" },
-                  { val: "55", lbl: "Feature columns" },
+                  { val: "42", lbl: "Feature columns" },
                   { val: "11", lbl: "Disease classes" },
-                  { val: "300", lbl: "Decision trees" },
+                  { val: "91.6%", lbl: "Accuracy" },
                 ].map(s => (
                   <div key={s.lbl} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>{s.lbl}</span>
@@ -99,6 +100,7 @@ export default function PredictSection() {
             {/* Top accent line */}
             <div style={{ position: "absolute", top: 0, left: "15%", right: "15%", height: 1, background: "linear-gradient(90deg,transparent,var(--accent),transparent)" }} />
             <PredictForm />
+            <PredictionHistory />
           </div>
         </div>
       </div>

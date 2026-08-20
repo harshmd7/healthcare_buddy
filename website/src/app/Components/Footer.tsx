@@ -45,7 +45,7 @@ export default function Footer() {
       </p>
 
       <p style={{ fontSize: 13, color: "var(--text-dim)" }}>
-        Built with Next.js + FastAPI + RandomForest
+        Built with Next.js + FastAPI + HistGradientBoosting
       </p>
     </footer>
   );

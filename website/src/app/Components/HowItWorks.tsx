@@ -196,14 +196,14 @@ export default function HowItWorks() {
               About the Model
             </div>
             <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>
-              RandomForest Classifier · 300 Estimators · Max Depth 15
+              HistGradientBoosting · Tuned for Real-World Accuracy
             </div>
           </div>
           {[
-            { label: "Algorithm", val: "Random Forest" },
-            { label: "Datasets", val: "7 combined" },
-            { label: "Features", val: "40+ parameters" },
-            { label: "Preprocessing", val: "Normalized" },
+            { label: "Algorithm", val: "HistGradientBoosting" },
+            { label: "Features", val: "42 parameters" },
+            { label: "Accuracy", val: "91.6%" },
+            { label: "Classes", val: "11 diseases" },
           ].map((item) => (
             <div key={item.label} style={{ textAlign: "center" }}>
               <div

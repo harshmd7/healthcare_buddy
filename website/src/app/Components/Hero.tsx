@@ -113,7 +113,7 @@ export default function Hero() {
               textTransform: "uppercase",
             }}
           >
-            ML-Powered · 7 Clinical Datasets · RandomForest
+            ML-Powered · HistGradientBoosting · 91.6% Accuracy
           </span>
         </div>
 
@@ -147,8 +147,8 @@ export default function Hero() {
           }}
         >
           HealthBuddy analyses your symptoms, vitals, and medical history using a
-          RandomForest model trained on 7 combined clinical datasets to give you
-          an instant disease prediction.
+          HistGradientBoosting model trained on clinical data to give you
+          an instant disease prediction with 91.6% accuracy.
         </p>
 
         {/* CTA */}
@@ -190,10 +190,10 @@ export default function Hero() {
           }}
         >
           {[
-            { val: "7", label: "Clinical Datasets" },
-            { val: "40+", label: "Health Parameters" },
-            { val: "RF", label: "RandomForest Model" },
-            { val: "Fast", label: "Instant Results" },
+            { val: "935K", label: "Training Samples" },
+            { val: "42", label: "Features" },
+            { val: "91.6%", label: "Accuracy" },
+            { val: "11", label: "Diseases" },
           ].map((stat) => (
             <div key={stat.label} style={{ textAlign: "center" }}>
               <div

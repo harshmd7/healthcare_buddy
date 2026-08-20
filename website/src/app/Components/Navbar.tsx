@@ -1,8 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
+import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const { isLoaded, isSignedIn } = useUser();
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -61,7 +63,7 @@ export default function Navbar() {
       </div>
 
       {/* Links */}
-      <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         {["Features", "How It Works", "Predict"].map((item) => (
           <a
             key={item}
@@ -79,30 +81,44 @@ export default function Navbar() {
             {item}
           </a>
         ))}
-        <a
-          href="#predict"
-          style={{
-            background: "var(--accent)",
-            color: "#000",
-            textDecoration: "none",
-            fontSize: 13,
-            fontWeight: 700,
-            padding: "8px 18px",
-            borderRadius: "8px",
-            transition: "all 0.2s",
-            letterSpacing: "0.02em",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.background = "#00ff88";
-            (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px var(--accent-glow-strong)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.background = "var(--accent)";
-            (e.currentTarget as HTMLElement).style.boxShadow = "none";
-          }}
-        >
-          Try Now →
-        </a>
+        {isLoaded && !isSignedIn ? (
+          <>
+            <SignInButton mode="modal">
+              <button
+                style={{
+                  background: "transparent",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                }}
+              >
+                Sign in
+              </button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <button
+                style={{
+                  background: "var(--accent)",
+                  color: "#000",
+                  border: "none",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  padding: "8px 18px",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                }}
+              >
+                Sign up
+              </button>
+            </SignUpButton>
+          </>
+        ) : (
+          <UserButton />
+        )}
       </div>
     </nav>
   );
