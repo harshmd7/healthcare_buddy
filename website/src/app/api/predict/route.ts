@@ -45,6 +45,7 @@ export async function POST(req: Request) {
       success: true,
       disease: data.disease,
       confidence: data.confidence ?? null,
+      top3: data.top3 ?? [],
       stored,
     });
   } catch (error: unknown) {

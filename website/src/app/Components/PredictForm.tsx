@@ -284,22 +284,84 @@ export default function PredictForm() {
           </div>
         )}
 
-        {top3.length > 1 && (
-          <div style={{ maxWidth: 460, margin: "0 auto 28px", textAlign: "left" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 10 }}>
-              Model Confidence Breakdown
-            </div>
-            {top3.map((t) => (
-              <div key={t.disease} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                <div style={{ width: 130, fontSize: 13, color: "rgba(255,255,255,0.7)" }}>{t.disease}</div>
-                <div style={{ flex: 1, height: 8, borderRadius: 6, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-                  <div style={{ width: `${Math.round(t.confidence * 100)}%`, height: "100%", background: "var(--accent)" }} />
+        {top3.length > 0 && (
+          <div style={{ maxWidth: 540, margin: "0 auto 28px", textAlign: "left" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 6 }}>
+                  Top 3 likely matches
                 </div>
-                <div style={{ width: 46, fontSize: 12, textAlign: "right", color: "rgba(255,255,255,0.5)" }}>
-                  {Math.round(t.confidence * 100)}%
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>
+                  Ranked from strongest signal to weakest based on the current input set.
                 </div>
               </div>
-            ))}
+              <div style={{ padding: "8px 12px", borderRadius: 999, background: "rgba(0,232,122,0.1)", border: "1px solid rgba(0,232,122,0.2)", color: "var(--accent)", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
+                AI ranking
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gap: 12 }}>
+              {top3.map((t, index) => {
+                const pct = Math.round(t.confidence * 100);
+                const featured = index === 0;
+                const label = index === 0 ? "Most likely" : index === 1 ? "Second choice" : "Third choice";
+                return (
+                  <div
+                    key={t.disease}
+                    style={{
+                      position: "relative",
+                      overflow: "hidden",
+                      padding: "16px 16px 14px",
+                      borderRadius: 18,
+                      background: featured
+                        ? "linear-gradient(135deg, rgba(0,232,122,0.16), rgba(0,0,0,0.22))"
+                        : "rgba(255,255,255,0.03)",
+                      border: featured
+                        ? "1px solid rgba(0,232,122,0.25)"
+                        : "1px solid rgba(255,255,255,0.08)",
+                      boxShadow: featured ? "0 0 40px rgba(0,232,122,0.08)" : "none",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: 16, marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 11, display: "grid", placeItems: "center", background: featured ? "var(--accent)" : "rgba(255,255,255,0.08)", color: featured ? "#000" : "rgba(255,255,255,0.7)", fontWeight: 800 }}>
+                          {index + 1}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 15, fontWeight: 800, color: "var(--text)", marginBottom: 2 }}>
+                            {t.disease}
+                          </div>
+                          <div style={{ fontSize: 12, color: featured ? "var(--accent)" : "rgba(255,255,255,0.45)", fontWeight: 700 }}>
+                            {label}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: featured ? "var(--accent)" : "rgba(255,255,255,0.85)", lineHeight: 1 }}>
+                          {pct}%
+                        </div>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 4 }}>
+                          confidence
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ height: 8, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                      <div
+                        style={{
+                          width: `${pct}%`,
+                          height: "100%",
+                          borderRadius: 999,
+                          background: featured
+                            ? "linear-gradient(90deg, var(--accent), #86ffbf)"
+                            : "linear-gradient(90deg, rgba(255,255,255,0.45), rgba(255,255,255,0.75))",
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

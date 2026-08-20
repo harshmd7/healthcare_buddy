@@ -84,10 +84,16 @@ class PatientData(BaseModel):
     severity_score: Optional[int] = None
 
 
+class TopPrediction(BaseModel):
+    disease: str
+    confidence: float
+
+
 class PredictionResponse(BaseModel):
     success: bool
     disease: Optional[str] = None
     confidence: Optional[str] = None
+    top3: Optional[List[TopPrediction]] = None
     message: Optional[str] = None
     error: Optional[str] = None
 
@@ -119,6 +125,24 @@ def prepare_input(data: PatientData) -> np.ndarray:
             feature_vector[idx] = float(value)
 
     return feature_vector.reshape(1, -1)
+
+
+def build_top3(model_output: np.ndarray) -> List[TopPrediction]:
+    if not hasattr(model, "predict_proba"):
+        return []
+
+    probabilities = model_output[0]
+    top3_indices = np.argsort(probabilities)[::-1][:3]
+
+    top3: List[TopPrediction] = []
+    for idx in top3_indices:
+        top3.append(
+            TopPrediction(
+                disease=label_encoder.inverse_transform([idx])[0],
+                confidence=round(float(probabilities[idx]), 4),
+            )
+        )
+    return top3
 
 
 @app.get("/", tags=["Root"])
@@ -153,11 +177,13 @@ def predict(data: PatientData):
         features = prepare_input(data)
         prediction = model.predict(features)[0]
         disease = label_encoder.inverse_transform([prediction])[0]
+        top3: List[TopPrediction] = []
 
         confidence = "high"
         if hasattr(model, "predict_proba"):
             try:
                 probas = model.predict_proba(features)[0]
+                top3 = build_top3(np.asarray([probas]))
                 max_prob = max(probas)
                 if max_prob > 0.8:
                     confidence = "very high"
@@ -192,6 +218,7 @@ def predict(data: PatientData):
             "success": True,
             "disease": disease,
             "confidence": confidence,
+            "top3": top3,
             "message": "Prediction completed successfully",
         }
 
