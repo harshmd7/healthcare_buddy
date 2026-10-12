@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { specializationFor } from "@/lib/specialization";
+import { getAuthenticatedDoctor } from "@/lib/doctor-auth";
 
 // POST /api/cases
 // body: { patientName?, symptoms, predictedDisease, confidence, top3 }
@@ -54,13 +55,17 @@ export async function POST(req: Request) {
 
 // GET /api/cases?doctorId=xxx&status=pending
 export async function GET(req: Request) {
+  const doctor = await getAuthenticatedDoctor();
+  if (!doctor) {
+    return NextResponse.json({ success: false, error: "Doctor access required" }, { status: 403 });
+  }
+
   const { searchParams } = new URL(req.url);
-  const doctorId = searchParams.get("doctorId");
   const status = searchParams.get("status");
 
   const cases = await prisma.case.findMany({
     where: {
-      ...(doctorId ? { doctorId } : {}),
+      doctorId: doctor.id,
       ...(status ? { status } : {}),
     },
     include: { doctor: true },

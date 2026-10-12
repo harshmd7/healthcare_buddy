@@ -24,6 +24,16 @@ Before running the app, make sure you have:
 - generated the Prisma client and applied the migration for the `Prediction` table
 - started the FastAPI server from the `ml/` folder with `python -m uvicorn app:app --reload`
 
+### Doctor admin access
+
+Doctor review access is restricted to Clerk accounts explicitly linked to a doctor record. Create the doctor accounts in Clerk, then add their IDs to `.env` using a JSON object keyed by the seeded doctor name:
+
+```env
+DOCTOR_CLERK_USER_IDS={"Dr. Anjali Sharma":"user_...","Dr. Rohan Mehta":"user_..."}
+```
+
+Run `npm run db:seed` after setting the variable. Doctors sign in at `/doctor/sign-in`; the review queue is available at `/doctor`. Patient accounts cannot access another doctor&apos;s queue or update cases.
+
 To generate and migrate the database schema:
 
 ```bash

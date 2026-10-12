@@ -22,40 +22,59 @@ const DISEASES = [
 ];
 
 export default function DoctorDashboard() {
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
+  const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [cases, setCases] = useState<CaseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCase, setActiveCase] = useState<CaseItem | null>(null);
   const [confirmDisease, setConfirmDisease] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/doctors")
+    fetch("/api/doctors/me")
       .then((r) => r.json())
       .then((d) => {
+        if (d.success) setDoctor(d.doctor);
+        else setProfileError(d.error || "This account is not linked to a doctor profile.");
         if (d.success) {
-          setDoctors(d.doctors);
-          if (d.doctors.length) setSelectedDoctorId(d.doctors[0].id);
+          fetch("/api/cases")
+            .then((response) => response.json())
+            .then((casesResponse) => {
+              if (casesResponse.success) setCases(casesResponse.cases);
+              else setProfileError(casesResponse.error || "Unable to load cases.");
+              setLoading(false);
+            })
+            .catch(() => {
+              setProfileError("Unable to load your case queue.");
+              setLoading(false);
+            });
+        } else {
+          setLoading(false);
         }
+      })
+      .catch(() => {
+        setProfileError("Unable to load your doctor profile.");
+        setLoading(false);
       });
   }, []);
 
   const loadCases = useCallback(() => {
-    if (!selectedDoctorId) return;
+    if (!doctor) return;
     setLoading(true);
-    fetch(`/api/cases?doctorId=${selectedDoctorId}`)
+    fetch("/api/cases")
       .then((r) => r.json())
       .then((d) => {
         if (d.success) setCases(d.cases);
+        else setProfileError(d.error || "Unable to load cases.");
+        setLoading(false);
+      })
+      .catch(() => {
+        setProfileError("Unable to load your case queue.");
         setLoading(false);
       });
-  }, [selectedDoctorId]);
-
-  useEffect(() => {
-    loadCases();
-  }, [loadCases]);
+  }, [doctor]);
 
   const openCase = (c: CaseItem) => {
     setActiveCase(c);
@@ -64,18 +83,25 @@ export default function DoctorDashboard() {
   };
 
   const acceptCase = async (c: CaseItem) => {
-    await fetch(`/api/cases/${c.id}`, {
+    setActionError(null);
+    const response = await fetch(`/api/cases/${c.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "in_review" }),
     });
+    if (!response.ok) {
+      const data = await response.json();
+      setActionError(data.error || "Could not accept this case.");
+      return;
+    }
     loadCases();
   };
 
   const submitReview = async () => {
     if (!activeCase) return;
     setSaving(true);
-    await fetch(`/api/cases/${activeCase.id}`, {
+    setActionError(null);
+    const response = await fetch(`/api/cases/${activeCase.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -84,6 +110,12 @@ export default function DoctorDashboard() {
         doctorNote: note,
       }),
     });
+    if (!response.ok) {
+      const data = await response.json();
+      setActionError(data.error || "Could not save this review.");
+      setSaving(false);
+      return;
+    }
     setSaving(false);
     setActiveCase(null);
     loadCases();
@@ -103,21 +135,25 @@ export default function DoctorDashboard() {
             <div style={{ fontSize: 26, fontWeight: 700, fontFamily: "var(--font-serif)" }}>Case Queue</div>
           </div>
 
-          <select
-            value={selectedDoctorId}
-            onChange={(e) => setSelectedDoctorId(e.target.value)}
-            style={{
-              background: "rgba(255,255,255,0.06)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)",
-              borderRadius: 8, padding: "10px 14px", fontSize: 14,
-            }}
-          >
-            {doctors.map((d) => (
-              <option key={d.id} value={d.id} style={{ color: "#000" }}>
-                {d.name} — {d.specialization}
-              </option>
-            ))}
-          </select>
+          {doctor && (
+            <div style={{ textAlign: "right", fontSize: 13, color: "rgba(255,255,255,0.6)" }}>
+              <div style={{ color: "#fff", fontWeight: 700 }}>{doctor.name}</div>
+              <div>{doctor.specialization}</div>
+            </div>
+          )}
         </div>
+
+        {profileError && (
+          <div style={{ border: "1px solid rgba(255,107,107,0.35)", background: "rgba(255,107,107,0.08)", borderRadius: 10, padding: 16, color: "#ff9b9b", marginBottom: 18 }}>
+            {profileError} {profileError.includes("linked") && <a href="/doctor/sign-in" style={{ color: "#fff" }}>Use a doctor account</a>}
+          </div>
+        )}
+
+        {actionError && (
+          <div style={{ border: "1px solid rgba(255,170,0,0.35)", background: "rgba(255,170,0,0.08)", borderRadius: 10, padding: 16, color: "#ffd166", marginBottom: 18 }}>
+            {actionError}
+          </div>
+        )}
 
         {loading && <div style={{ color: "rgba(255,255,255,0.5)" }}>Loading cases...</div>}
 

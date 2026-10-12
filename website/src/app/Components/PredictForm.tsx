@@ -160,7 +160,6 @@ const DISEASE_META: Record<string, { icon: string; color: string }> = {
 // ─── STEPS ───────────────────────────────────────────────────────────────────
 const STEPS = ["Profile", "History", "Condition", "Symptoms"];
 const STEP_ICONS = ["", "", "", ""];
-
 export default function PredictForm() {
   const [form, setForm] = useState<F>(DEF);
   const [step, setStep] = useState(0); // 0-indexed
@@ -232,10 +231,17 @@ export default function PredictForm() {
         }),
       });
       const d = await r.json();
-      if (d.success) setRequestedCase(d.case);
-      else setRequestError(d.error || "Could not create consultation request.");
+      if (!d.success) {
+        setRequestError(d.error || "Could not create consultation request.");
+        setRequesting(false);
+        return;
+      }
+
+      setRequestedCase(d.case);
     } catch {
       setRequestError("Cannot reach the server.");
+      setRequesting(false);
+      return;
     }
     setRequesting(false);
   };
@@ -377,11 +383,14 @@ export default function PredictForm() {
                 opacity: requesting ? 0.6 : 1,
               }}
             >
-              {requesting ? "Requesting..." : "Request Doctor Consultation"}
+              {requesting ? "Redirecting..." : "Request Doctor Consultation"}
             </button>
             {requestError && (
               <div style={{ color: "#ff6b6b", fontSize: 13, marginTop: 8 }}>{requestError}</div>
             )}
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 8, lineHeight: 1.5 }}>
+              You can set the redirect target with <strong>NEXT_PUBLIC_DOCTOR_CONSULTATION_URL</strong>.
+            </div>
           </div>
         )}
 
@@ -396,10 +405,13 @@ export default function PredictForm() {
             </div>
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.7 }}>
               {requestedCase.doctor ? (
-                <>Matched with <strong>{requestedCase.doctor.name}</strong> ({requestedCase.doctor.specialization}). Case ID: {requestedCase.id}</>
+                <>Assigned to <strong>{requestedCase.doctor.name}</strong> ({requestedCase.doctor.specialization}). The doctor will review your case shortly. Case ID: {requestedCase.id}</>
               ) : (
-                <>No available doctor for this specialization right now. Your request has been logged, case ID: {requestedCase.id}</>
+                <>Your request is waiting for an available doctor. Case ID: {requestedCase.id}</>
               )}
+            </div>
+            <div style={{ marginTop: 12, fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+              Status: <strong style={{ color: "#00b4d8" }}>Pending doctor review</strong>
             </div>
           </div>
         )}
