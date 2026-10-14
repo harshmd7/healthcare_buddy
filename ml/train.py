@@ -86,12 +86,17 @@ df["disease"] = target_encoder.fit_transform(df["disease"])
 X = df.drop("disease", axis=1)
 
 y = df["disease"]
+print(f"\n📊 Features before variance filtering: {len(X.columns)} columns")
+print(f"   Columns: {X.columns.tolist()}")
 
 selector = VarianceThreshold(threshold=0.02)
 
 X_selected = selector.fit_transform(X)
 
 selected_columns = X.columns[selector.get_support()]
+
+print(f"Master dataset records: {len(df):,}")
+print(f"Features retained: {len(selected_columns)}")
 
 X = pd.DataFrame(
     X_selected,
@@ -120,7 +125,7 @@ X_train, X_test, y_train, y_test = train_test_split(
     stratify=y,
     random_state=42
 )
-
+print(f"\n✂️  Train: {len(X_train):,} | Test: {len(X_test):,}")
 print(f"Train Size: {len(X_train):,}")
 print(f"Test Size : {len(X_test):,}")
 

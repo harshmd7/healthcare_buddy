@@ -16,7 +16,7 @@ const steps = [
   {
     num: "03",
     title: "AI Analyses the Data",
-    desc: "Our RandomForest model—trained on 7 real clinical datasets—computes risk scores, feature interactions, and BMI/age groupings before making its prediction.",
+    desc: "Our HistGradientBoosting model—trained on clinical data—computes risk scores, feature interactions, and demographic patterns before making its prediction.",
     icon: "",
   },
   {
