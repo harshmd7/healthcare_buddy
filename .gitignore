@@ -11,6 +11,7 @@ __pycache__/
 # ML data and models
 ml/models/
 ml/healthcare_master_dataset.csv
+ml/user_feedback.csv
 
 # OS files
 .DS_Store

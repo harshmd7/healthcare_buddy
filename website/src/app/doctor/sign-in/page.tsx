@@ -15,8 +15,7 @@ export default function DoctorSignInPage() {
         <SignIn
           routing="path"
           path="/doctor/sign-in"
-          signUpUrl="/sign-up"
-          forceRedirectUrl="/doctor"
+          fallbackRedirectUrl="/doctor"
         />
       </div>
     </main>

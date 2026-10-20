@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 import joblib
+from pathlib import Path
 
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.preprocessing import LabelEncoder
@@ -17,11 +18,20 @@ from sklearn.metrics import (
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.utils import shuffle
 
-os.makedirs("models", exist_ok=True)
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_DIR = BASE_DIR / "models"
+FEEDBACK_PATH = BASE_DIR / "user_feedback.csv"
+MODEL_DIR.mkdir(exist_ok=True)
 
 print("Loading dataset...")
 
-df = pd.read_csv("healthcare_master_dataset.csv")
+df = pd.read_csv(BASE_DIR / "healthcare_master_dataset.csv")
+
+if FEEDBACK_PATH.exists():
+    feedback = pd.read_csv(FEEDBACK_PATH)
+    feedback = feedback.drop(columns=["case_id"], errors="ignore")
+    df = pd.concat([df, feedback], ignore_index=True, sort=False)
+    print(f"Added {len(feedback):,} doctor-confirmed feedback rows")
 
 print(f"Original Shape: {df.shape}")
 
@@ -59,10 +69,11 @@ valid_diseases = disease_counts[disease_counts >= 500].index
 df = df[df["disease"].isin(valid_diseases)]
 
 if df["gender"].dtype == object:
-    df["gender"] = df["gender"].map({
+    df["gender"] = df["gender"].replace({
         "Male": 0,
         "Female": 1
     })
+df["gender"] = pd.to_numeric(df["gender"], errors="coerce").fillna(0)
 
 categorical_cols = []
 
@@ -84,6 +95,8 @@ target_encoder = LabelEncoder()
 df["disease"] = target_encoder.fit_transform(df["disease"])
 
 X = df.drop("disease", axis=1)
+
+X = X.apply(pd.to_numeric, errors="coerce").fillna(0)
 
 y = df["disease"]
 print(f"\n📊 Features before variance filtering: {len(X.columns)} columns")
@@ -195,27 +208,27 @@ print(classification_report(
 
 joblib.dump(
     model,
-    "models/disease_model.pkl"
+    MODEL_DIR / "disease_model.pkl"
 )
 
 joblib.dump(
     target_encoder,
-    "models/label_encoder.pkl"
+    MODEL_DIR / "label_encoder.pkl"
 )
 
 joblib.dump(
     selected_columns.tolist(),
-    "models/columns.pkl"
+    MODEL_DIR / "columns.pkl"
 )
 
 joblib.dump(
     cat_encoders,
-    "models/cat_encoders.pkl"
+    MODEL_DIR / "cat_encoders.pkl"
 )
 
 joblib.dump(
     selector,
-    "models/variance_selector.pkl"
+    MODEL_DIR / "variance_selector.pkl"
 )
 
 print("\nModel saved successfully!")

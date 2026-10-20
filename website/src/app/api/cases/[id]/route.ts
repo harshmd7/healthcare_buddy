@@ -47,7 +47,7 @@ export async function PATCH(
 
     const current = await prisma.case.findUnique({
       where: { id, doctorId: doctor.id },
-      select: { status: true },
+      select: { status: true, symptomsJson: true },
     });
 
     if (!current) {
@@ -84,7 +84,25 @@ export async function PATCH(
       include: { doctor: true },
     });
 
-    return NextResponse.json({ success: true, case: updated });
+    let retrained = false;
+    if (status === "completed" && confirmedDisease) {
+      try {
+        const feedbackResponse = await fetch("http://127.0.0.1:8000/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            case_id: id,
+            disease: confirmedDisease,
+            symptoms: JSON.parse(current.symptomsJson),
+          }),
+        });
+        retrained = feedbackResponse.ok;
+      } catch (feedbackError) {
+        console.error("ML feedback error:", feedbackError);
+      }
+    }
+
+    return NextResponse.json({ success: true, case: updated, retrained });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ success: false, error: msg }, { status: 500 });

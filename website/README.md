@@ -26,10 +26,18 @@ Before running the app, make sure you have:
 
 ### Doctor admin access
 
-Doctor review access is restricted to Clerk accounts explicitly linked to a doctor record. Create the doctor accounts in Clerk, then add their IDs to `.env` using a JSON object keyed by the seeded doctor name:
+Doctor review access is restricted to Clerk accounts explicitly linked to a doctor record. Create the doctor account in Clerk, open its profile, and copy the user ID beginning with `user_`. From the `website` directory, link it with:
+
+```bash
+npm run doctor:link -- user_abc123 "Dr. Actual Name" "Cardiologist"
+```
+
+The third argument must be one of the supported specializations used by the case assignment logic, such as `Cardiologist`, `Neurologist`, `Pulmonologist`, `Endocrinologist`, or `General Physician`.
+
+You can also configure multiple real doctors through `.env`:
 
 ```env
-DOCTOR_CLERK_USER_IDS={"Dr. Anjali Sharma":"user_...","Dr. Rohan Mehta":"user_..."}
+DOCTORS_JSON=[{"name":"Dr. Real Name","specialization":"Cardiologist","clerkUserId":"user_..."}]
 ```
 
 Run `npm run db:seed` after setting the variable. Doctors sign in at `/doctor/sign-in`; the review queue is available at `/doctor`. Patient accounts cannot access another doctor&apos;s queue or update cases.
@@ -56,3 +64,5 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+When a doctor completes a case, the submitted feature data and confirmed disease are appended to `ml/user_feedback.csv`. The ML service retrains from the master dataset plus this confirmed feedback and reloads the model automatically. Only doctor-confirmed cases are used for training; unlabeled predictions are not.

@@ -5,6 +5,10 @@ from typing import List, Optional
 import joblib
 import numpy as np
 import os
+import pandas as pd
+import subprocess
+import sys
+from pathlib import Path
 
 app = FastAPI(
     title="HealthBuddy API",
@@ -20,20 +24,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_DIR = BASE_DIR / "models"
+FEEDBACK_PATH = BASE_DIR / "user_feedback.csv"
 
-try:
-    model = joblib.load(os.path.join(MODEL_DIR, "disease_model.pkl"))
-    label_encoder = joblib.load(os.path.join(MODEL_DIR, "label_encoder.pkl"))
-    columns = joblib.load(os.path.join(MODEL_DIR, "columns.pkl"))
-    cat_encoders = joblib.load(os.path.join(MODEL_DIR, "cat_encoders.pkl"))
-    print(f"Model loaded successfully with {len(columns)} features")
-except Exception as e:
-    print(f"Error loading model: {e}")
-    model = None
-    label_encoder = None
-    columns = []
-    cat_encoders = {}
+def load_model() -> None:
+    global model, label_encoder, columns, cat_encoders
+    try:
+        model = joblib.load(MODEL_DIR / "disease_model.pkl")
+        label_encoder = joblib.load(MODEL_DIR / "label_encoder.pkl")
+        columns = joblib.load(MODEL_DIR / "columns.pkl")
+        cat_encoders = joblib.load(MODEL_DIR / "cat_encoders.pkl")
+        print(f"Model loaded successfully with {len(columns)} features")
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        model = None
+        label_encoder = None
+        columns = []
+        cat_encoders = {}
+
+
+load_model()
 
 
 class PatientData(BaseModel):
@@ -105,6 +116,12 @@ class HealthCheckResponse(BaseModel):
     model_loaded: bool
     features_count: int
     disease_classes: List[str]
+
+
+class FeedbackRequest(BaseModel):
+    case_id: str
+    disease: str
+    symptoms: dict
 
 
 def prepare_input(data: PatientData) -> np.ndarray:
@@ -224,6 +241,40 @@ def predict(data: PatientData):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
+
+
+@app.post("/feedback", tags=["Training"])
+def add_feedback(data: FeedbackRequest):
+    """Add one doctor-confirmed case to the training set and retrain."""
+    disease = data.disease.strip()
+    if not disease or not data.symptoms:
+        raise HTTPException(status_code=400, detail="Disease and symptoms are required")
+
+    existing_ids = set()
+    if FEEDBACK_PATH.exists():
+        existing_ids = set(pd.read_csv(FEEDBACK_PATH, usecols=["case_id"])["case_id"].astype(str))
+    if data.case_id in existing_ids:
+        return {"success": True, "duplicate": True, "retrained": False}
+
+    row = {"case_id": data.case_id, **data.symptoms, "disease": disease}
+    pd.DataFrame([row]).to_csv(
+        FEEDBACK_PATH,
+        mode="a",
+        header=not FEEDBACK_PATH.exists(),
+        index=False,
+    )
+
+    try:
+        subprocess.run(
+            [sys.executable, str(BASE_DIR / "train.py")],
+            cwd=BASE_DIR,
+            check=True,
+        )
+        load_model()
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=f"Feedback saved but retraining failed: {error}")
+
+    return {"success": True, "duplicate": False, "retrained": True}
 
 
 @app.get("/diseases", tags=["Information"])
